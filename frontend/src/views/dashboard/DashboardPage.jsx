@@ -160,180 +160,172 @@ export function DashboardPage() {
     }
   }
 
+  const todayStr = new Intl.DateTimeFormat('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(new Date())
+
   return (
-    <div className="pb-24">
-      {/* GLOWING HERO SECTION */}
-      <div className="mb-16 mt-8 flex flex-col items-center text-center relative">
-        <div className="absolute top-0 w-full h-[500px] bg-primary/5 blur-[120px] rounded-full pointer-events-none" />
-        
-        <div className="relative grid h-[180px] w-[180px] place-items-center rounded-full bg-surface/80 backdrop-blur-md border border-primary/40 shadow-[0_0_60px_rgba(0,229,255,0.4)] z-10">
-           <div className="absolute inset-0 rounded-full border border-primary/30 animate-[ping_3s_ease-in-out_infinite]" />
-           <div className="absolute -inset-8 rounded-full border border-primary/10 animate-[pulse_4s_ease-in-out_infinite]" />
-           <div className="absolute -inset-16 rounded-full border border-primary/5 animate-[spin_10s_linear_infinite] border-t-primary/40" />
-           <Bot size={80} strokeWidth={1.5} className="text-primary drop-shadow-[0_0_20px_rgba(0,229,255,1)]" />
+    <div className="pb-24 pt-4 md:pt-6 max-w-[1400px] mx-auto space-y-8 px-4 md:px-8 bg-[#04060A] min-h-screen text-white font-sans">
+      
+      {/* Top Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <h1 className="text-[28px] font-bold text-white tracking-wide">Dashboard</h1>
+        <div className="flex items-center gap-4">
+          <button className="grid h-10 w-10 place-items-center rounded-2xl bg-[#1c2128] hover:bg-[#2d333b] text-white/50 transition-colors cursor-pointer"><span className="font-bold text-lg">?</span></button>
+          <button className="grid h-10 w-10 place-items-center rounded-2xl bg-[#1c2128] hover:bg-[#2d333b] text-white/50 transition-colors cursor-pointer">🎤</button>
+          <button className="flex items-center gap-2 rounded-2xl bg-[#1c2128] px-4 h-10 hover:bg-[#2d333b] text-white/70 transition-colors cursor-pointer font-bold text-sm">
+            ☀️ Light
+          </button>
         </div>
-        
-        <h1 className="mt-10 text-5xl md:text-7xl font-black uppercase tracking-[0.3em] text-transparent bg-clip-text bg-gradient-to-b from-white to-primary drop-shadow-[0_0_20px_rgba(0,229,255,0.6)]">
-          D E X I V A
-        </h1>
-        <p className="mt-4 text-sm md:text-base font-bold tracking-[0.4em] text-primary/80 uppercase drop-shadow-[0_0_8px_rgba(0,229,255,0.5)]">
-          Your Personal AI Assistant
-        </p>
-        
-        <div className="mt-10 flex items-center justify-center gap-2 opacity-90">
-          {[1,2,3,4,5,6,7].map((i) => (
-            <div 
-              key={i} 
-              className="w-1.5 rounded-full bg-primary shadow-[0_0_10px_rgba(0,229,255,0.9)]" 
-              style={{ 
-                height: `${12 + Math.abs(Math.sin(i)*20)}px`, 
-                animation: `pulse ${0.4 + (i%3)*0.2}s infinite alternate` 
-              }} 
-            />
-          ))}
+      </div>
+
+      {/* Daily Challenge Banner */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between rounded-[20px] bg-[#0A0E17] border border-white/5 px-6 py-4 shadow-lg">
+        <div className="flex items-center gap-4">
+          <div className="text-[#f97316] drop-shadow-[0_0_8px_rgba(249,115,22,0.8)]">⚡</div>
+          <div className="text-[14px] font-bold tracking-wide text-[#38bdf8]">
+            Daily Challenge: <span className="font-medium text-white/50 ml-2">Log a social interaction</span>
+          </div>
         </div>
-        
-        <div className="mt-12 relative z-20">
+        <div className="flex items-center gap-4 mt-4 sm:mt-0 w-full sm:w-auto">
+          <div className="bg-gold/10 text-gold rounded-full px-4 py-1.5 text-xs font-bold">+25 XP</div>
           <Button 
-            onClick={() => navigate('/ai')} 
-            className="px-12 py-5 text-lg tracking-widest shadow-[0_0_40px_rgba(0,229,255,0.6)] hover:shadow-[0_0_60px_rgba(0,229,255,0.8)] hover:-translate-y-1.5 border border-white/20"
+            size="sm" 
+            onClick={completeChallenge} 
+            disabled={busy || challengeDone} 
+            className={`rounded-full px-6 py-1.5 transition-all text-sm font-bold shadow-none ${challengeDone ? 'bg-[#0f2e28] text-[#10b981] cursor-not-allowed border border-[#10b981]/20' : 'bg-[#0f766e]/20 border border-[#0f766e] text-[#2dd4bf] hover:bg-[#0f766e]/40'}`}
           >
-             <Bot size={26} className="drop-shadow-[0_0_5px_white]" /> START TALKING
+            Done!
           </Button>
-          <div className="mt-8 flex items-center justify-center gap-6">
-             <Badge tone="online" className="px-4 py-2 text-xs">AI ONLINE</Badge>
-             <Badge tone="online" className="px-4 py-2 text-xs">VOICE READY</Badge>
+        </div>
+      </div>
+
+      {/* Greeting */}
+      <div className="flex items-center justify-between mt-10">
+        <div>
+          <h2 className="text-[32px] font-bold text-white tracking-tight">Good evening 👋</h2>
+          <div className="mt-2 text-sm font-semibold text-white/40 tracking-wide">{todayStr}</div>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 bg-[#f59e0b]/20 text-[#f59e0b] rounded-full px-4 py-2 text-xs font-bold">
+            🔥 {profile?.streak || 0} day streak
+          </div>
+          <div className="flex h-8 px-4 items-center justify-center rounded-xl bg-[#4c1d95]/40 text-[#c084fc] text-xs font-black">
+            Lv {lev.level}
           </div>
         </div>
       </div>
 
-      <div className="mb-6 flex items-center gap-3 px-2">
-        <div className="text-xl font-bold tracking-widest text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.5)] uppercase">
-          Welcome back{profile?.name ? `, ${profile.name}` : ''}
+      {/* 5 Metric Cards Row */}
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-5 mt-8">
+        <div className="flex flex-col rounded-[20px] bg-[#0A0E17] border border-white/5 px-6 py-6 shadow-[inset_0_-4px_20px_-10px_#06b6d4,0_4px_30px_-5px_rgba(6,182,212,0.3)]">
+          <div className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">TASKS</div>
+          <div className="mt-4 text-[42px] font-black leading-none text-[#38bdf8]">{stats?.planner?.done || 0}</div>
+          <div className="mt-4 text-xs font-semibold text-[#06b6d4]/50">done today</div>
         </div>
-        <Badge tone="active">ACTIVE SYSTEM</Badge>
-      </div>
+        
+        <div className="flex flex-col rounded-[24px] bg-[#0A0E17] border border-white/5 px-6 py-6 ring-1 ring-[#c084fc]/10 shadow-[inset_0_-4px_20px_-10px_#a855f7,0_4px_30px_-5px_rgba(168,85,247,0.3)]">
+          <div className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">HABITS</div>
+          <div className="mt-4 text-[42px] font-black leading-none text-[#c084fc]">{stats?.planner?.habits || 0}</div>
+          <div className="mt-4 text-xs font-semibold text-[#a855f7]/50">completed</div>
+        </div>
 
-      <div className="grid gap-6 md:grid-cols-3">
-        <Card className="md:col-span-2">
-          <SectionLabel>System XP</SectionLabel>
-          {!profile ? (
-            <div className="mt-4 grid gap-3">
-              <Skeleton className="h-8 w-56" />
-              <Skeleton className="h-2 w-full" />
-            </div>
-          ) : (
-            <div className="mt-4">
-              <div className="flex items-end justify-between gap-4">
-                <div>
-                  <div className="text-2xl font-black text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.3)]">Level {lev.level}</div>
-                  <div className="mt-1 text-sm font-bold text-primary/70 tracking-widest uppercase">
-                    <span className="mono text-primary drop-shadow-[0_0_5px_rgba(0,229,255,0.5)]">{lev.into}</span>/<span className="mono">{lev.next}</span> XP to next level
-                  </div>
-                </div>
-                <div className="text-xl font-black text-primary drop-shadow-[0_0_10px_rgba(0,229,255,0.6)]">{Math.round((lev.into / lev.next) * 100)}%</div>
-              </div>
-              <div className="mt-5">
-                <ProgressBar value={(lev.into / lev.next) * 100} />
-              </div>
-            </div>
-          )}
-        </Card>
+        <div className="flex flex-col rounded-[24px] bg-[#0A0E17] border border-white/5 px-6 py-6 ring-1 ring-[#4ade80]/10 shadow-[inset_0_-4px_20px_-10px_#22c55e,0_4px_30px_-5px_rgba(34,197,94,0.3)]">
+          <div className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">STUDY</div>
+          <div className="mt-4 text-[42px] font-black leading-none text-[#4ade80]">{stats?.study?.hrs || '0.0'}h</div>
+          <div className="mt-4 text-xs font-semibold text-[#22c55e]/50">today</div>
+        </div>
 
-        <Card>
-          <SectionLabel>Current Streak</SectionLabel>
-          {!profile ? (
-            <div className="mt-4 grid gap-3">
-              <Skeleton className="h-10 w-32" />
-              <Skeleton className="h-4 w-40" />
-            </div>
-          ) : (
-            <div className="mt-4 flex flex-col justify-center h-full pb-4">
-              <div className="flex items-center gap-4">
-                <div className="grid h-14 w-14 place-items-center rounded-full bg-gold/20 ring-1 ring-gold/50 shadow-[0_0_20px_rgba(245,158,11,0.4)]">
-                  <Flame className="text-gold drop-shadow-[0_0_10px_rgba(245,158,11,0.8)]" size={28} />
-                </div>
-                <div>
-                  <div className="text-3xl font-black text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.4)]">{profile.streak ?? 0} DAYS</div>
-                  <div className="text-xs font-bold text-gold/80 tracking-widest uppercase mt-1">Best: {profile.best_streak ?? 0}</div>
-                </div>
-              </div>
-            </div>
-          )}
-        </Card>
-      </div>
+        <div className="flex flex-col rounded-[24px] bg-[#0A0E17] border border-white/5 px-6 py-6 ring-1 ring-[#fb923c]/10 shadow-[inset_0_-4px_20px_-10px_#f97316,0_4px_30px_-5px_rgba(249,115,22,0.3)]">
+          <div className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">SPENT</div>
+          <div className="mt-4 text-[42px] font-black leading-none text-[#fb923c]">₹{stats?.finance?.exp || 0}</div>
+          <div className="mt-4 text-xs font-semibold text-[#f97316]/50">today</div>
+        </div>
 
-      <div className="mt-6">
-        <SectionLabel className="px-2 mb-4">Today at a Glance</SectionLabel>
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 md:grid-cols-3">
-          {Object.entries(c).map(([name, d]) => (
-            <div
-              key={name}
-              onClick={() => navigate(d.path)}
-              className="cursor-pointer rounded-xl bg-[#0d1420] p-5 shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl"
-              style={{ borderTop: `3px solid ${d.color}` }}
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-[10px] font-black tracking-[0.2em] uppercase" style={{ color: d.color }}>
-                  <d.icon size={16} /> {name}
-                </div>
-                <div className="rounded-full px-2.5 py-1 text-[9px] font-bold tracking-widest uppercase" style={{ backgroundColor: `${d.color}20`, color: d.color }}>
-                  {d.pill}
-                </div>
-              </div>
-              
-              <div className="mt-4 text-[32px] font-black leading-none text-white drop-shadow-md">
-                {d.val}
-              </div>
-              
-              <div className="mt-5 flex items-center justify-between text-[11px] font-bold text-muted uppercase tracking-wider">
-                <div className="flex items-center gap-1.5">
-                  {d.l1}: <span style={{ color: d.color }} className="truncate max-w-[80px] text-right inline-block">{d.v1}</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  {d.l2}: <span style={{ color: d.color }} className="truncate max-w-[80px] text-right inline-block">{d.v2}</span>
-                </div>
-              </div>
-            </div>
-          ))}
+        <div className="flex flex-col rounded-[24px] bg-[#0A0E17] border border-white/5 px-6 py-6 ring-1 ring-[#f472b6]/10 shadow-[inset_0_-4px_20px_-10px_#ec4899,0_4px_30px_-5px_rgba(236,72,153,0.3)]">
+          <div className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">MOOD</div>
+          <div className="mt-4 text-[42px] font-black leading-none text-[#f472b6]">{stats?.health?.mood === '—' ? '—' : (stats?.health?.mood || '—')}</div>
+          <div className="mt-4 text-xs font-semibold text-[#ec4899]/50">today</div>
         </div>
       </div>
 
-      <div className="mt-6 grid gap-6 md:grid-cols-2">
-        <Card>
-          <SectionLabel>Daily Directives</SectionLabel>
-          <div className="mt-5 flex items-start justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-3 text-lg font-black text-white drop-shadow-[0_0_5px_rgba(255,255,255,0.3)]">
-                <Sparkles size={22} className="text-primary drop-shadow-[0_0_8px_rgba(0,229,255,0.8)]" />
-                1 Hard Thing. No Negotiation.
-              </div>
-              <div className="mt-2 text-sm font-bold text-muted tracking-wide">Execute module. Acquire XP.</div>
-            </div>
-            <Button onClick={completeChallenge} disabled={busy || challengeDone} className={challengeDone ? 'bg-success/20 text-success shadow-none border-success/30' : ''}>
-              {challengeDone ? (
-                <>
-                  <CheckCircle2 size={18} /> Verified
-                </>
-              ) : (
-                `ACKNOWLEDGE (+${XP.dailyChallenge} XP)`
-              )}
-            </Button>
+      {/* Middle Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
+        <div className="rounded-[24px] border border-white/5 bg-[#0A0E17] flex flex-col p-8 h-full shadow-lg">
+          <div className="text-white/40 font-black tracking-[0.2em] text-[11px] mb-6 flex items-center gap-2">💬 DAILY QUOTE</div>
+          <div className="flex-1 text-xl font-medium italic text-[#64748b] leading-relaxed pr-8">
+            "{quote?.text ?? 'Push yourself, because no one else is going to do it for you.'}"
           </div>
-        </Card>
+          <div className="mt-8 text-xs font-black tracking-widest text-[#334155] uppercase">— {quote?.by ?? 'Unknown'}</div>
+        </div>
+        
+        <div className="rounded-[24px] border border-white/5 bg-[#0A0E17] flex flex-col p-8 h-full shadow-lg">
+          <div className="text-white/40 font-black tracking-[0.2em] text-[11px] mb-6 flex items-center gap-2">📋 TODAY'S TASKS</div>
+          <div className="flex-1 flex items-center justify-center font-bold text-[#334155] text-sm tracking-wide">
+            No tasks today
+          </div>
+        </div>
+      </div>
 
-        <Card>
-          <SectionLabel>System Quote</SectionLabel>
-          <div className="mt-5 flex items-start gap-4">
-            <div className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-white/5 ring-1 ring-white/20">
-              <Quote size={20} className="text-primary drop-shadow-[0_0_8px_rgba(0,229,255,0.6)]" />
-            </div>
-            <div className="pt-1">
-              <div className="text-base font-bold italic text-white/90 leading-relaxed">{quote?.text ?? '—'}</div>
-              <div className="mt-3 text-xs font-black text-primary/70 uppercase tracking-[0.3em]">{quote?.by ?? ''}</div>
-            </div>
+      {/* Arena Row */}
+      <div className="mt-8 rounded-[24px] border border-[#1e1b4b]/40 bg-[#070A11] p-8 pb-12 shadow-[inset_0_0_80px_rgba(20,20,50,0.3)] relative overflow-hidden">
+        <div className="text-[#38bdf8]/60 font-black tracking-[0.2em] text-[11px] mb-12 flex items-center gap-2">🏆 ARENA — YOUR PROGRESS</div>
+        
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 mb-12 relative z-10">
+          <div className="text-center">
+            <div className="text-[64px] font-black text-[#38bdf8] drop-shadow-[0_0_20px_rgba(56,189,248,0.4)] leading-none">{profile?.xp || 0}</div>
+            <div className="mt-4 text-[10px] font-black uppercase tracking-[0.25em] text-white/40">TOTAL XP</div>
           </div>
-        </Card>
+          <div className="text-center">
+            <div className="text-[64px] font-black text-[#f59e0b] drop-shadow-[0_0_20px_rgba(245,158,11,0.4)] leading-none">{profile?.streak || 0}</div>
+            <div className="mt-4 text-[10px] font-black uppercase tracking-[0.25em] text-white/40">DAY STREAK</div>
+          </div>
+          <div className="text-center">
+            <div className="text-[64px] font-black text-[#a855f7] drop-shadow-[0_0_20px_rgba(168,85,247,0.4)] leading-none">0</div>
+            <div className="mt-4 text-[10px] font-black uppercase tracking-[0.25em] text-white/40">BADGES</div>
+          </div>
+          <div className="text-center">
+            <div className="text-[64px] font-black text-[#22c55e] drop-shadow-[0_0_20px_rgba(34,197,94,0.4)] leading-none">D</div>
+            <div className="mt-4 text-[10px] font-black uppercase tracking-[0.25em] text-white/40">WEEK GRADE</div>
+          </div>
+        </div>
+        
+        <div className="flex flex-wrap items-center justify-center gap-3 lg:px-16 mt-16 relative z-10">
+          <div className="flex items-center gap-2 rounded-full border border-primary/40 bg-primary/10 text-white shadow-[0_0_15px_rgba(0,229,255,0.2)] px-4 py-2 text-[11px] font-bold">✅ First Task</div>
+          <div className="flex items-center gap-2 rounded-full border border-white/5 bg-white/5 text-white/40 px-4 py-2 text-[11px] font-bold">🏆 5 Tasks Done</div>
+          <div className="flex items-center gap-2 rounded-full border border-white/5 bg-white/5 text-white/40 px-4 py-2 text-[11px] font-bold">🌟 20 Tasks Done</div>
+          <div className="flex items-center gap-2 rounded-full border border-white/5 bg-white/5 text-white/40 px-4 py-2 text-[11px] font-bold">🔥 Habit Builder</div>
+          <div className="flex items-center gap-2 rounded-full border border-white/5 bg-white/5 text-white/40 px-4 py-2 text-[11px] font-bold">🔥 3 Day Streak</div>
+          <div className="flex items-center gap-2 rounded-full border border-white/5 bg-white/5 text-white/40 px-4 py-2 text-[11px] font-bold">⚡ 7 Day Streak</div>
+          <div className="flex items-center gap-2 rounded-full border border-white/5 bg-white/5 text-white/40 px-4 py-2 text-[11px] font-bold">💧 Fully Hydrated</div>
+          <div className="flex items-center gap-2 rounded-full border border-white/5 bg-white/5 text-white/40 px-4 py-2 text-[11px] font-bold">🥗 Food Logger</div>
+          <div className="flex items-center gap-2 rounded-full border border-white/5 bg-white/5 text-white/40 px-4 py-2 text-[11px] font-bold">🏃 Athlete</div>
+          <div className="flex items-center gap-2 rounded-full border border-white/5 bg-white/5 text-white/40 px-4 py-2 text-[11px] font-bold">🥇 PR Holder</div>
+          <div className="flex items-center gap-2 rounded-full border border-white/5 bg-white/5 text-white/40 px-4 py-2 text-[11px] font-bold">📓 Journaler</div>
+          <div className="flex items-center gap-2 rounded-full border border-white/5 bg-white/5 text-white/40 px-4 py-2 text-[11px] font-bold">😴 Good Sleeper</div>
+          <div className="flex items-center gap-2 rounded-full border border-white/5 bg-white/5 text-white/40 px-4 py-2 text-[11px] font-bold">💸 Saver</div>
+          <div className="flex items-center gap-2 rounded-full border border-white/5 bg-white/5 text-white/40 px-4 py-2 text-[11px] font-bold">🎯 Goal Chaser</div>
+          <div className="flex items-center gap-2 rounded-full border border-white/5 bg-white/5 text-white/40 px-4 py-2 text-[11px] font-bold">👥 Social Butterfly</div>
+          <div className="flex items-center gap-2 rounded-full border border-white/5 bg-white/5 text-white/40 px-4 py-2 text-[11px] font-bold">📚 Scholar</div>
+          <div className="flex items-center gap-2 rounded-full border border-white/5 bg-white/5 text-white/40 px-4 py-2 text-[11px] font-bold">⭐ Level 3</div>
+          <div className="flex items-center gap-2 rounded-full border border-white/5 bg-white/5 text-white/40 px-4 py-2 text-[11px] font-bold">🌟 Level 5</div>
+        </div>
+      </div>
+      
+      {/* Weekly Overview Stub */}
+      <div className="mt-8 rounded-[24px] border border-white/5 bg-[#0A0E17] p-8 pb-16 shadow-xl">
+         <div className="flex justify-between items-center mb-10">
+            <div className="text-white/40 font-black tracking-[0.2em] text-[11px] flex items-center gap-2">📈 WEEKLY OVERVIEW</div>
+            <div className="flex items-center gap-4 text-xs font-bold text-white/50">
+               <span className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-sm bg-[#06b6d4]"></div> Tasks</span>
+               <span className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-sm bg-[#a855f7]"></div> Habits</span>
+               <span className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-sm bg-[#22c55e]"></div> Study hrs</span>
+            </div>
+         </div>
+         {/* Fake Chart Grid */}
+         <div className="relative w-full h-40 border-l border-b border-white/10 flex flex-col justify-between ml-4">
+            <div className="w-full h-[1px] bg-white/5 border-dashed relative"><span className="absolute -left-8 -top-2 text-[10px] text-white/30">1.0</span></div>
+            <div className="w-full h-[1px] bg-white/5 border-dashed relative"><span className="absolute -left-8 -top-2 text-[10px] text-white/30">0.5</span></div>
+            <div className="w-full h-[1px] bg-white/5 border-dashed relative"><span className="absolute -left-8 -top-2 text-[10px] text-white/30">0.0</span></div>
+         </div>
       </div>
     </div>
   )
