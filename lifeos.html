@@ -1,0 +1,1719 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>LifeOS</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg: #07090f;
+  --bg2: #0d1117;
+  --card: rgba(255,255,255,0.04);
+  --card-border: rgba(255,255,255,0.08);
+  --card-hover: rgba(255,255,255,0.07);
+  --glass: rgba(13,17,23,0.8);
+  --cyan: #00d4ff;
+  --cyan-dim: rgba(0,212,255,0.15);
+  --cyan-glow: rgba(0,212,255,0.3);
+  --purple: #7c3aed;
+  --purple-dim: rgba(124,58,237,0.15);
+  --green: #10b981;
+  --green-dim: rgba(16,185,129,0.15);
+  --orange: #f59e0b;
+  --orange-dim: rgba(245,158,11,0.15);
+  --red: #ef4444;
+  --red-dim: rgba(239,68,68,0.15);
+  --text: #e2e8f0;
+  --text-dim: #64748b;
+  --text-muted: #334155;
+  --sidebar-w: 220px;
+  --radius: 14px;
+  --radius-sm: 8px;
+}
+
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{height:100%;overflow:hidden;}
+body{
+  font-family:'Space Grotesk',sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  display:flex;
+  font-size:14px;
+}
+
+/* Ambient orbs */
+body::before,body::after{
+  content:'';position:fixed;border-radius:50%;filter:blur(120px);pointer-events:none;z-index:0;
+}
+body::before{
+  width:500px;height:500px;
+  background:radial-gradient(circle,rgba(0,212,255,0.08),transparent 70%);
+  top:-100px;left:-100px;
+}
+body::after{
+  width:400px;height:400px;
+  background:radial-gradient(circle,rgba(124,58,237,0.07),transparent 70%);
+  bottom:-100px;right:100px;
+}
+
+/* SIDEBAR */
+#sidebar{
+  width:var(--sidebar-w);
+  min-width:var(--sidebar-w);
+  height:100vh;
+  background:rgba(7,9,15,0.95);
+  border-right:1px solid var(--card-border);
+  display:flex;
+  flex-direction:column;
+  padding:20px 12px;
+  position:relative;
+  z-index:10;
+  backdrop-filter:blur(20px);
+}
+.logo{
+  display:flex;align-items:center;gap:10px;
+  padding:8px 10px 20px;
+  border-bottom:1px solid var(--card-border);
+  margin-bottom:16px;
+}
+.logo-icon{
+  width:32px;height:32px;
+  background:linear-gradient(135deg,var(--cyan),var(--purple));
+  border-radius:8px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:16px;
+  box-shadow:0 0 20px var(--cyan-glow);
+}
+.logo-text{font-size:16px;font-weight:700;letter-spacing:.5px;}
+.logo-text span{color:var(--cyan);}
+
+.nav-section{margin-bottom:8px;}
+.nav-label{
+  font-size:10px;font-weight:600;letter-spacing:1.5px;
+  color:var(--text-muted);padding:0 10px;margin-bottom:4px;text-transform:uppercase;
+}
+.nav-item{
+  display:flex;align-items:center;gap:10px;
+  padding:9px 10px;
+  border-radius:var(--radius-sm);
+  cursor:pointer;
+  transition:all .2s;
+  color:var(--text-dim);
+  font-size:13px;font-weight:500;
+  position:relative;
+  margin-bottom:2px;
+}
+.nav-item:hover{
+  background:var(--card);
+  color:var(--text);
+}
+.nav-item.active{
+  background:var(--cyan-dim);
+  color:var(--cyan);
+  box-shadow:inset 0 0 0 1px rgba(0,212,255,0.2);
+}
+.nav-item.active::before{
+  content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);
+  width:3px;height:60%;background:var(--cyan);border-radius:0 2px 2px 0;
+  box-shadow:0 0 8px var(--cyan);
+}
+.nav-icon{font-size:16px;width:20px;text-align:center;}
+
+.sidebar-bottom{margin-top:auto;border-top:1px solid var(--card-border);padding-top:16px;}
+.level-card{
+  background:var(--card);
+  border:1px solid var(--card-border);
+  border-radius:var(--radius-sm);
+  padding:12px;
+}
+.level-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+.level-badge{
+  background:linear-gradient(135deg,var(--purple),var(--cyan));
+  border-radius:20px;
+  padding:2px 10px;
+  font-size:11px;font-weight:700;
+}
+.level-xp{font-size:11px;color:var(--text-dim);}
+.xp-bar{
+  height:4px;background:var(--card-border);border-radius:2px;overflow:hidden;
+}
+.xp-fill{
+  height:100%;
+  background:linear-gradient(90deg,var(--cyan),var(--purple));
+  border-radius:2px;
+  box-shadow:0 0 8px var(--cyan-glow);
+  transition:width .6s ease;
+}
+
+/* MAIN */
+#main{
+  flex:1;
+  height:100vh;
+  overflow:hidden;
+  display:flex;
+  flex-direction:column;
+  position:relative;
+  z-index:1;
+}
+
+/* TOP BAR */
+#topbar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 24px;
+  border-bottom:1px solid var(--card-border);
+  background:rgba(7,9,15,0.7);
+  backdrop-filter:blur(20px);
+  flex-shrink:0;
+}
+.topbar-title{font-size:18px;font-weight:700;}
+.topbar-right{display:flex;align-items:center;gap:10px;}
+.topbar-btn{
+  padding:7px 14px;
+  border-radius:var(--radius-sm);
+  border:1px solid var(--card-border);
+  background:var(--card);
+  color:var(--text);
+  cursor:pointer;font-size:12px;font-weight:500;
+  transition:all .2s;font-family:inherit;
+}
+.topbar-btn:hover{border-color:var(--cyan);color:var(--cyan);}
+.topbar-btn.primary{
+  background:var(--cyan-dim);
+  border-color:var(--cyan);
+  color:var(--cyan);
+}
+#voice-btn{
+  width:34px;height:34px;
+  border-radius:50%;
+  border:1px solid var(--card-border);
+  background:var(--card);
+  color:var(--text);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:all .2s;font-size:16px;
+}
+#voice-btn:hover{border-color:var(--cyan);box-shadow:0 0 12px var(--cyan-glow);}
+#voice-btn.listening{
+  background:var(--red-dim);border-color:var(--red);
+  animation:pulse 1s infinite;
+}
+@keyframes pulse{0%,100%{box-shadow:0 0 8px rgba(239,68,68,0.4);}50%{box-shadow:0 0 20px rgba(239,68,68,0.7);}}
+
+/* CONTENT */
+#content{
+  flex:1;
+  overflow-y:auto;
+  padding:24px;
+  scrollbar-width:thin;
+  scrollbar-color:var(--card-border) transparent;
+}
+#content::-webkit-scrollbar{width:4px;}
+#content::-webkit-scrollbar-track{background:transparent;}
+#content::-webkit-scrollbar-thumb{background:var(--card-border);border-radius:2px;}
+
+.section{display:none;}
+.section.active{display:block;}
+
+/* CARDS */
+.card{
+  background:var(--card);
+  border:1px solid var(--card-border);
+  border-radius:var(--radius);
+  padding:18px;
+  transition:all .2s;
+  position:relative;
+  overflow:hidden;
+}
+.card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,0.06),transparent);
+}
+.card:hover{
+  border-color:rgba(255,255,255,0.12);
+  background:var(--card-hover);
+}
+.card-title{
+  font-size:11px;font-weight:600;letter-spacing:1px;
+  color:var(--text-dim);text-transform:uppercase;margin-bottom:14px;
+}
+.card-value{font-size:28px;font-weight:700;}
+.card-sub{font-size:12px;color:var(--text-dim);margin-top:2px;}
+
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;}
+.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;}
+.gap-top{margin-top:14px;}
+
+/* STAT CARDS */
+.stat-card{
+  background:var(--card);
+  border:1px solid var(--card-border);
+  border-radius:var(--radius);
+  padding:16px;
+  position:relative;overflow:hidden;
+}
+.stat-card::after{
+  content:'';position:absolute;bottom:0;left:0;right:0;height:2px;
+}
+.stat-card.cyan::after{background:linear-gradient(90deg,transparent,var(--cyan),transparent);}
+.stat-card.purple::after{background:linear-gradient(90deg,transparent,var(--purple),transparent);}
+.stat-card.green::after{background:linear-gradient(90deg,transparent,var(--green),transparent);}
+.stat-card.orange::after{background:linear-gradient(90deg,transparent,var(--orange),transparent);}
+
+.stat-label{font-size:10px;font-weight:600;letter-spacing:1px;color:var(--text-dim);text-transform:uppercase;margin-bottom:6px;}
+.stat-val{font-size:24px;font-weight:700;}
+.stat-val.cyan{color:var(--cyan);}
+.stat-val.purple{color:var(--purple);}
+.stat-val.green{color:var(--green);}
+.stat-val.orange{color:var(--orange);}
+.stat-meta{font-size:11px;color:var(--text-muted);margin-top:2px;}
+
+/* INPUTS */
+.input-row{display:flex;gap:8px;margin-bottom:10px;align-items:flex-start;flex-wrap:wrap;}
+input,select,textarea{
+  background:rgba(255,255,255,0.04);
+  border:1px solid var(--card-border);
+  border-radius:var(--radius-sm);
+  color:var(--text);
+  font-family:inherit;font-size:13px;
+  padding:9px 12px;
+  outline:none;
+  transition:all .2s;
+  flex:1;min-width:120px;
+}
+input:focus,select:focus,textarea:focus{
+  border-color:var(--cyan);
+  box-shadow:0 0 0 2px var(--cyan-dim);
+}
+select option{background:#1a2233;}
+textarea{resize:vertical;min-height:80px;}
+
+/* BUTTONS */
+.btn{
+  padding:9px 16px;
+  border-radius:var(--radius-sm);
+  border:none;cursor:pointer;
+  font-family:inherit;font-size:13px;font-weight:600;
+  transition:all .2s;white-space:nowrap;
+}
+.btn-primary{
+  background:var(--cyan-dim);
+  border:1px solid var(--cyan);
+  color:var(--cyan);
+}
+.btn-primary:hover{background:rgba(0,212,255,0.25);box-shadow:0 0 16px var(--cyan-glow);}
+.btn-ghost{
+  background:var(--card);
+  border:1px solid var(--card-border);
+  color:var(--text-dim);
+}
+.btn-ghost:hover{border-color:rgba(255,255,255,0.15);color:var(--text);}
+.btn-danger{
+  background:var(--red-dim);border:1px solid rgba(239,68,68,0.3);color:var(--red);
+}
+.btn-danger:hover{background:rgba(239,68,68,0.25);}
+.btn-sm{padding:5px 10px;font-size:11px;}
+.btn-icon{padding:7px 9px;}
+
+/* PROGRESS BAR */
+.prog-bar{height:6px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;margin-top:6px;}
+.prog-fill{height:100%;border-radius:3px;transition:width .5s ease;}
+.prog-fill.cyan{background:linear-gradient(90deg,var(--cyan),rgba(0,212,255,0.6));box-shadow:0 0 6px var(--cyan-glow);}
+.prog-fill.purple{background:linear-gradient(90deg,var(--purple),rgba(124,58,237,0.6));}
+.prog-fill.green{background:linear-gradient(90deg,var(--green),rgba(16,185,129,0.6));}
+.prog-fill.orange{background:linear-gradient(90deg,var(--orange),rgba(245,158,11,0.6));}
+
+/* TAGS / BADGES */
+.tag{
+  display:inline-flex;align-items:center;gap:4px;
+  padding:3px 8px;border-radius:20px;
+  font-size:11px;font-weight:600;
+}
+.tag-cyan{background:var(--cyan-dim);color:var(--cyan);}
+.tag-purple{background:var(--purple-dim);color:var(--purple);}
+.tag-green{background:var(--green-dim);color:var(--green);}
+.tag-orange{background:var(--orange-dim);color:var(--orange);}
+.tag-red{background:var(--red-dim);color:var(--red);}
+
+/* LISTS */
+.list-item{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 12px;
+  background:rgba(255,255,255,0.02);
+  border:1px solid var(--card-border);
+  border-radius:var(--radius-sm);
+  margin-bottom:6px;
+  transition:all .2s;
+}
+.list-item:hover{background:rgba(255,255,255,0.04);border-color:rgba(255,255,255,0.1);}
+.list-item.done{opacity:.5;}
+.list-item.done .li-title{text-decoration:line-through;}
+.li-title{flex:1;font-size:13px;font-weight:500;}
+.li-sub{font-size:11px;color:var(--text-dim);}
+.li-actions{display:flex;gap:4px;}
+
+/* CHECKBOX */
+.check-btn{
+  width:20px;height:20px;border-radius:50%;
+  border:1.5px solid var(--card-border);
+  background:transparent;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;transition:all .2s;font-size:11px;
+}
+.check-btn.done{
+  background:var(--green-dim);border-color:var(--green);color:var(--green);
+}
+
+/* TIMER */
+.timer-display{
+  font-family:'JetBrains Mono',monospace;
+  font-size:52px;font-weight:500;
+  text-align:center;
+  padding:24px;
+  background:rgba(255,255,255,0.02);
+  border:1px solid var(--card-border);
+  border-radius:var(--radius);
+  letter-spacing:4px;
+  color:var(--cyan);
+  text-shadow:0 0 30px var(--cyan-glow);
+}
+.timer-controls{display:flex;justify-content:center;gap:10px;margin-top:14px;}
+
+/* HABIT GRID */
+.habit-week{display:flex;gap:4px;margin-top:8px;}
+.habit-day{
+  flex:1;height:28px;border-radius:4px;
+  background:rgba(255,255,255,0.04);
+  border:1px solid var(--card-border);
+  display:flex;align-items:center;justify-content:center;
+  font-size:9px;color:var(--text-muted);
+  transition:all .2s;cursor:pointer;
+}
+.habit-day.done{
+  background:var(--green-dim);border-color:var(--green);
+  color:var(--green);font-size:12px;
+}
+
+/* CHART CONTAINERS */
+.chart-box{
+  position:relative;
+  background:rgba(255,255,255,0.02);
+  border:1px solid var(--card-border);
+  border-radius:var(--radius);
+  padding:16px;
+  margin-top:14px;
+}
+.chart-box canvas{max-height:200px;}
+.chart-title{font-size:11px;font-weight:600;letter-spacing:1px;color:var(--text-dim);text-transform:uppercase;margin-bottom:12px;}
+.chart-donut-wrap{display:flex;align-items:center;gap:16px;}
+.chart-donut-wrap canvas{max-width:130px;max-height:130px;}
+.donut-legend{flex:1;}
+.donut-leg-item{display:flex;align-items:center;gap:6px;margin-bottom:6px;font-size:12px;}
+.donut-leg-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+
+/* WATER */
+.water-glasses{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;}
+.glass-btn{
+  width:36px;height:36px;
+  border-radius:var(--radius-sm);
+  border:1px solid var(--card-border);
+  background:rgba(255,255,255,0.03);
+  cursor:pointer;font-size:18px;
+  transition:all .2s;display:flex;align-items:center;justify-content:center;
+}
+.glass-btn.filled{background:rgba(0,212,255,0.15);border-color:var(--cyan);}
+.glass-btn:hover{border-color:var(--cyan);}
+
+/* TOAST */
+#toast-container{
+  position:fixed;bottom:20px;right:20px;z-index:9999;
+  display:flex;flex-direction:column-reverse;gap:8px;
+}
+.toast{
+  background:rgba(13,17,23,0.95);
+  border:1px solid var(--card-border);
+  border-radius:var(--radius-sm);
+  padding:10px 16px;
+  font-size:13px;
+  backdrop-filter:blur(20px);
+  animation:toastIn .3s ease;
+  max-width:280px;
+}
+.toast.success{border-left:3px solid var(--green);color:var(--green);}
+.toast.error{border-left:3px solid var(--red);color:var(--red);}
+.toast.info{border-left:3px solid var(--cyan);color:var(--cyan);}
+@keyframes toastIn{from{opacity:0;transform:translateX(20px);}to{opacity:1;transform:translateX(0);}}
+
+/* BADGE */
+.badge-grid{display:flex;flex-wrap:wrap;gap:8px;}
+.badge{
+  padding:6px 12px;
+  border-radius:20px;
+  font-size:12px;font-weight:600;
+  background:var(--card);border:1px solid var(--card-border);
+  display:flex;align-items:center;gap:6px;
+}
+.badge.earned{background:var(--purple-dim);border-color:rgba(124,58,237,0.3);color:#a78bfa;}
+
+/* FILTER PILLS */
+.filter-pills{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;}
+.pill{
+  padding:5px 12px;border-radius:20px;
+  font-size:12px;font-weight:500;
+  background:var(--card);border:1px solid var(--card-border);
+  cursor:pointer;transition:all .2s;color:var(--text-dim);
+}
+.pill.active{background:var(--cyan-dim);border-color:var(--cyan);color:var(--cyan);}
+
+/* NOTE SUBJECTS */
+.subj-pills{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;}
+.subj-pill{
+  padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600;
+  cursor:pointer;transition:all .2s;background:var(--card);border:1px solid var(--card-border);color:var(--text-dim);
+}
+.subj-pill:hover,.subj-pill.active{background:var(--cyan-dim);border-color:var(--cyan);color:var(--cyan);}
+
+/* SECTION HEADER */
+.sec-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;}
+.sec-title{font-size:20px;font-weight:700;}
+.sec-sub{font-size:13px;color:var(--text-dim);margin-top:2px;}
+
+/* Pomodoro mode indicator */
+.pomo-ring{
+  width:160px;height:160px;margin:0 auto 16px;position:relative;
+}
+.pomo-ring svg{transform:rotate(-90deg);}
+.pomo-ring-label{
+  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  text-align:center;
+}
+.pomo-ring-label .time{font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:500;color:var(--cyan);text-shadow:0 0 20px var(--cyan-glow);}
+.pomo-ring-label .mode{font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px;margin-top:2px;}
+
+/* Responsive tweaks */
+@media(max-width:900px){
+  .grid-4{grid-template-columns:1fr 1fr;}
+  .grid-3{grid-template-columns:1fr 1fr;}
+  #sidebar{width:60px;min-width:60px;padding:12px 8px;}
+  .logo-text,.nav-label,.nav-item span{display:none;}
+  .nav-item{justify-content:center;}
+  .level-card{display:none;}
+}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:4px;height:4px;}
+::-webkit-scrollbar-thumb{background:var(--card-border);border-radius:2px;}
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<nav id="sidebar">
+  <div class="logo">
+    <div class="logo-icon">⚡</div>
+    <div class="logo-text">Life<span>OS</span></div>
+  </div>
+  <div class="nav-section">
+    <div class="nav-label">Main</div>
+    <div class="nav-item active" onclick="navigate('dashboard')">
+      <span class="nav-icon">🏠</span><span>Dashboard</span>
+    </div>
+    <div class="nav-item" onclick="navigate('tasks')">
+      <span class="nav-icon">✅</span><span>Tasks</span>
+    </div>
+    <div class="nav-item" onclick="navigate('habits')">
+      <span class="nav-icon">🔥</span><span>Habits</span>
+    </div>
+  </div>
+  <div class="nav-section">
+    <div class="nav-label">Track</div>
+    <div class="nav-item" onclick="navigate('time')">
+      <span class="nav-icon">⏱️</span><span>Time</span>
+    </div>
+    <div class="nav-item" onclick="navigate('money')">
+      <span class="nav-icon">💰</span><span>Money</span>
+    </div>
+    <div class="nav-item" onclick="navigate('food')">
+      <span class="nav-icon">🥗</span><span>Food</span>
+    </div>
+    <div class="nav-item" onclick="navigate('notes')">
+      <span class="nav-icon">📝</span><span>Notes</span>
+    </div>
+  </div>
+  <div class="sidebar-bottom">
+    <div class="level-card">
+      <div class="level-row">
+        <span class="level-badge" id="level-badge">Lv 1</span>
+        <span class="level-xp" id="xp-text">0 / 500 XP</span>
+      </div>
+      <div class="xp-bar"><div class="xp-fill" id="xp-fill" style="width:0%"></div></div>
+    </div>
+  </div>
+</nav>
+
+<!-- MAIN AREA -->
+<div id="main">
+  <!-- TOP BAR -->
+  <div id="topbar">
+    <div>
+      <div class="topbar-title" id="page-title">Dashboard</div>
+    </div>
+    <div class="topbar-right">
+      <button class="topbar-btn" id="theme-toggle" onclick="toggleTheme()">☀️ Light</button>
+      <button id="voice-btn" onclick="toggleVoice()" title="Voice Command">🎤</button>
+      <div id="voice-status" style="font-size:11px;color:var(--text-dim);"></div>
+    </div>
+  </div>
+
+  <!-- CONTENT -->
+  <div id="content">
+
+    <!-- ====== DASHBOARD ====== -->
+    <div class="section active" id="sec-dashboard">
+      <div class="sec-header">
+        <div><div class="sec-title">Good day! 👋</div><div class="sec-sub" id="dash-date"></div></div>
+        <div class="tag tag-cyan" id="dash-streak">🔥 0 day streak</div>
+      </div>
+      <div class="grid-4">
+        <div class="stat-card cyan"><div class="stat-label">Tasks Done</div><div class="stat-val cyan" id="ds-tasks">0</div><div class="stat-meta">today</div></div>
+        <div class="stat-card purple"><div class="stat-label">Habits Done</div><div class="stat-val purple" id="ds-habits">0</div><div class="stat-meta">today</div></div>
+        <div class="stat-card green"><div class="stat-label">Study Time</div><div class="stat-val green" id="ds-time">0h</div><div class="stat-meta">today</div></div>
+        <div class="stat-card orange"><div class="stat-label">Spent Today</div><div class="stat-val orange" id="ds-money">₹0</div><div class="stat-meta">today</div></div>
+      </div>
+      <div class="grid-2 gap-top">
+        <div class="card">
+          <div class="card-title">📋 Today's Tasks</div>
+          <div id="dash-tasks-list"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">🏆 Achievements</div>
+          <div class="badge-grid" id="dash-badges"></div>
+        </div>
+      </div>
+      <div class="card gap-top">
+        <div class="card-title">📊 Weekly Overview</div>
+        <div class="chart-box">
+          <div class="chart-title">Weekly Activity</div>
+          <canvas id="dash-chart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- ====== TASKS ====== -->
+    <div class="section" id="sec-tasks">
+      <div class="sec-header">
+        <div><div class="sec-title">Task Manager</div><div class="sec-sub">Stay on top of your day</div></div>
+      </div>
+      <div class="card">
+        <div class="input-row">
+          <input type="text" id="task-input" placeholder="Add a new task..." style="min-width:200px;"/>
+          <select id="task-priority">
+            <option value="low">Low</option>
+            <option value="medium" selected>Medium</option>
+            <option value="high">High</option>
+          </select>
+          <input type="date" id="task-date"/>
+          <input type="text" id="task-cat" placeholder="Category..."/>
+          <button class="btn btn-primary" onclick="addTask()">+ Add Task</button>
+        </div>
+      </div>
+      <div class="filter-pills" id="task-filters">
+        <div class="pill active" onclick="filterTasks('all',this)">All</div>
+        <div class="pill" onclick="filterTasks('today',this)">Today</div>
+        <div class="pill" onclick="filterTasks('pending',this)">Pending</div>
+        <div class="pill" onclick="filterTasks('done',this)">Done</div>
+      </div>
+      <div id="tasks-list"></div>
+    </div>
+
+    <!-- ====== HABITS ====== -->
+    <div class="section" id="sec-habits">
+      <div class="sec-header">
+        <div><div class="sec-title">Habit Tracker</div><div class="sec-sub">Build consistency, one day at a time</div></div>
+      </div>
+      <div class="card">
+        <div class="input-row">
+          <input type="text" id="habit-name" placeholder="New habit name..."/>
+          <input type="text" id="habit-goal" placeholder="Daily goal..."/>
+          <input type="color" id="habit-color" value="#00d4ff" style="width:44px;padding:4px;flex:0 0 44px;"/>
+          <button class="btn btn-primary" onclick="addHabit()">+ Add Habit</button>
+        </div>
+      </div>
+      <div id="habits-list" class="gap-top"></div>
+    </div>
+
+    <!-- ====== TIME ====== -->
+    <div class="section" id="sec-time">
+      <div class="sec-header">
+        <div><div class="sec-title">Time Tracker</div><div class="sec-sub">Track focus sessions and activities</div></div>
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-title">⏱️ Stopwatch</div>
+          <div class="timer-display" id="stopwatch-display">00:00:00</div>
+          <div class="timer-controls">
+            <button class="btn btn-primary" id="sw-start" onclick="swToggle()">▶ Start</button>
+            <button class="btn btn-ghost" onclick="swReset()">↺ Reset</button>
+            <button class="btn btn-ghost" onclick="swSave()">💾 Save</button>
+          </div>
+          <div class="input-row" style="margin-top:12px;">
+            <input type="text" id="sw-activity" placeholder="Activity name..."/>
+            <select id="sw-category">
+              <option>Study</option><option>Work</option><option>Exercise</option><option>Other</option>
+            </select>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">🍅 Pomodoro</div>
+          <div class="pomo-ring">
+            <svg width="160" height="160" viewBox="0 0 160 160">
+              <circle cx="80" cy="80" r="68" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="8"/>
+              <circle cx="80" cy="80" r="68" fill="none" stroke="var(--cyan)" stroke-width="8"
+                stroke-dasharray="427" stroke-dashoffset="0" id="pomo-ring-circle"
+                stroke-linecap="round" style="filter:drop-shadow(0 0 6px var(--cyan));transition:stroke-dashoffset .5s;"/>
+            </svg>
+            <div class="pomo-ring-label">
+              <div class="time" id="pomo-display">25:00</div>
+              <div class="mode" id="pomo-mode">Focus</div>
+            </div>
+          </div>
+          <div class="timer-controls">
+            <button class="btn btn-primary" id="pomo-start" onclick="pomoToggle()">▶ Start</button>
+            <button class="btn btn-ghost" onclick="pomoReset()">↺ Reset</button>
+          </div>
+          <div class="input-row" style="margin-top:12px;">
+            <input type="number" id="pomo-work" value="25" min="1" max="60" placeholder="Work min"/><span style="color:var(--text-dim);align-self:center;font-size:12px;">min focus</span>
+            <input type="number" id="pomo-break" value="5" min="1" max="30" placeholder="Break min"/><span style="color:var(--text-dim);align-self:center;font-size:12px;">min break</span>
+          </div>
+        </div>
+      </div>
+      <!-- Manual entry -->
+      <div class="card gap-top">
+        <div class="card-title">Manual Entry</div>
+        <div class="input-row">
+          <input type="text" id="manual-activity" placeholder="Activity..."/>
+          <select id="manual-cat"><option>Study</option><option>Work</option><option>Exercise</option><option>Other</option></select>
+          <input type="number" id="manual-hours" placeholder="Hours" min="0" max="24" step="0.5"/>
+          <input type="date" id="manual-date"/>
+          <button class="btn btn-primary" onclick="addManualTime()">+ Log</button>
+        </div>
+      </div>
+      <!-- Time chart -->
+      <div class="chart-box gap-top">
+        <div class="chart-title">📈 Weekly Study Hours</div>
+        <canvas id="time-chart"></canvas>
+      </div>
+      <!-- History -->
+      <div class="card gap-top">
+        <div class="card-title">Recent Sessions</div>
+        <div id="time-history"></div>
+      </div>
+    </div>
+
+    <!-- ====== MONEY ====== -->
+    <div class="section" id="sec-money">
+      <div class="sec-header">
+        <div><div class="sec-title">Money Tracker</div><div class="sec-sub">Know where every rupee goes</div></div>
+      </div>
+      <div class="grid-3">
+        <div class="stat-card orange">
+          <div class="stat-label">Monthly Budget</div>
+          <div class="stat-val orange">₹<span id="money-budget-disp">0</span></div>
+          <div class="prog-bar"><div class="prog-fill orange" id="budget-bar" style="width:0%"></div></div>
+        </div>
+        <div class="stat-card red" style="--red:#ef4444;">
+          <div class="stat-label">Total Spent</div>
+          <div class="stat-val" style="color:var(--red);">₹<span id="money-spent-disp">0</span></div>
+          <div class="stat-meta" id="budget-remaining">₹0 remaining</div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-label">Today's Spending</div>
+          <div class="stat-val green">₹<span id="money-today-disp">0</span></div>
+        </div>
+      </div>
+      <div class="card gap-top">
+        <div class="card-title">Set Monthly Budget</div>
+        <div class="input-row">
+          <input type="number" id="budget-input" placeholder="Monthly budget (₹)..."/>
+          <button class="btn btn-primary" onclick="setBudget()">Set Budget</button>
+        </div>
+      </div>
+      <div class="card gap-top">
+        <div class="card-title">Add Expense</div>
+        <div class="input-row">
+          <input type="text" id="expense-name" placeholder="Description..."/>
+          <input type="number" id="expense-amount" placeholder="Amount (₹)..."/>
+          <select id="expense-cat">
+            <option>Food</option><option>Transport</option><option>Shopping</option>
+            <option>Education</option><option>Entertainment</option><option>Health</option><option>Other</option>
+          </select>
+          <input type="date" id="expense-date"/>
+          <button class="btn btn-primary" onclick="addExpense()">+ Add</button>
+        </div>
+      </div>
+      <div class="grid-2 gap-top">
+        <div class="chart-box">
+          <div class="chart-title">📈 Last 7 Days Spending</div>
+          <canvas id="money-line-chart"></canvas>
+        </div>
+        <div class="chart-box">
+          <div class="chart-title">🍩 Spending by Category</div>
+          <div class="chart-donut-wrap">
+            <canvas id="money-donut-chart"></canvas>
+            <div class="donut-legend" id="money-donut-legend"></div>
+          </div>
+        </div>
+      </div>
+      <div class="card gap-top">
+        <div class="card-title">Expense History</div>
+        <div id="expense-list"></div>
+      </div>
+    </div>
+
+    <!-- ====== FOOD ====== -->
+    <div class="section" id="sec-food">
+      <div class="sec-header">
+        <div><div class="sec-title">Food & Health</div><div class="sec-sub">Fuel your body right</div></div>
+      </div>
+      <!-- Nutrition summary -->
+      <div class="grid-4">
+        <div class="stat-card orange"><div class="stat-label">Calories</div><div class="stat-val orange" id="food-cals">0</div><div class="stat-meta">/ 2000 goal</div></div>
+        <div class="stat-card cyan"><div class="stat-label">Protein</div><div class="stat-val cyan" id="food-protein">0g</div><div class="stat-meta">/ 120g goal</div></div>
+        <div class="stat-card green"><div class="stat-label">Carbs</div><div class="stat-val green" id="food-carbs">0g</div><div class="stat-meta">/ 250g goal</div></div>
+        <div class="stat-card purple"><div class="stat-label">Fat</div><div class="stat-val purple" id="food-fat">0g</div><div class="stat-meta">/ 65g goal</div></div>
+      </div>
+      <!-- Water -->
+      <div class="card gap-top">
+        <div class="card-title">💧 Water Intake — <span id="water-count">0</span>/8 glasses</div>
+        <div class="water-glasses" id="water-glasses"></div>
+      </div>
+      <!-- Log meal -->
+      <div class="card gap-top">
+        <div class="card-title">Log Meal</div>
+        <div class="input-row">
+          <input type="text" id="meal-name" placeholder="Meal name..."/>
+          <select id="meal-type"><option>Breakfast</option><option>Lunch</option><option>Dinner</option><option>Snack</option></select>
+          <input type="number" id="meal-cals" placeholder="Calories"/>
+          <input type="number" id="meal-protein" placeholder="Protein (g)"/>
+          <input type="number" id="meal-carbs" placeholder="Carbs (g)"/>
+          <input type="number" id="meal-fat" placeholder="Fat (g)"/>
+          <button class="btn btn-primary" onclick="addMeal()">+ Log</button>
+        </div>
+      </div>
+      <!-- Charts row -->
+      <div class="grid-3 gap-top">
+        <div class="chart-box">
+          <div class="chart-title">📈 7-Day Calories</div>
+          <canvas id="food-line-chart"></canvas>
+        </div>
+        <div class="chart-box">
+          <div class="chart-title">🍩 Today's Macros</div>
+          <div class="chart-donut-wrap">
+            <canvas id="food-donut-chart"></canvas>
+            <div class="donut-legend" id="food-donut-legend"></div>
+          </div>
+        </div>
+        <div class="chart-box">
+          <div class="chart-title">🥧 Meal Breakdown</div>
+          <canvas id="food-pie-chart" style="max-height:180px;"></canvas>
+        </div>
+      </div>
+      <!-- Steps -->
+      <div class="card gap-top">
+        <div class="card-title">👟 Steps Tracker</div>
+        <div class="input-row">
+          <input type="number" id="steps-input" placeholder="Steps today..."/>
+          <button class="btn btn-primary" onclick="logSteps()">Log Steps</button>
+          <span style="color:var(--text-dim);font-size:13px;">Today: <strong id="steps-today">0</strong> steps</span>
+        </div>
+      </div>
+      <!-- Meal history -->
+      <div class="card gap-top">
+        <div class="card-title">Today's Meals</div>
+        <div id="meal-list"></div>
+      </div>
+    </div>
+
+    <!-- ====== NOTES ====== -->
+    <div class="section" id="sec-notes">
+      <div class="sec-header">
+        <div><div class="sec-title">Notes</div><div class="sec-sub">Brain dump, ideas, anything</div></div>
+        <button class="btn btn-primary" onclick="saveNote()">💾 Save Note</button>
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-title">New Note</div>
+          <div class="subj-pills" id="subj-pills">
+            <div class="subj-pill active" onclick="selectSubject('General',this)">General</div>
+            <div class="subj-pill" onclick="selectSubject('Math',this)">Math</div>
+            <div class="subj-pill" onclick="selectSubject('Physics',this)">Physics</div>
+            <div class="subj-pill" onclick="selectSubject('Chemistry',this)">Chemistry</div>
+            <div class="subj-pill" onclick="selectSubject('Biology',this)">Biology</div>
+            <div class="subj-pill" onclick="selectSubject('History',this)">History</div>
+            <div class="subj-pill" onclick="selectSubject('English',this)">English</div>
+            <div class="subj-pill" onclick="selectSubject('Other',this)">Other</div>
+          </div>
+          <input type="text" id="note-title" placeholder="Note title..." style="width:100%;margin-bottom:8px;"/>
+          <textarea id="note-body" placeholder="Write anything here..." style="width:100%;min-height:180px;"></textarea>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:6px;" id="note-autosave">Auto-saved</div>
+        </div>
+        <div class="card">
+          <div class="card-title">Saved Notes</div>
+          <div class="filter-pills" id="note-filter-pills">
+            <div class="pill active" onclick="filterNotes('all',this)">All</div>
+          </div>
+          <div id="notes-list"></div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- end #content -->
+</div><!-- end #main -->
+
+<!-- TOAST CONTAINER -->
+<div id="toast-container"></div>
+
+<script>
+// ========== STATE ==========
+let state = JSON.parse(localStorage.getItem('lifeos_state') || 'null') || {
+  tasks: [],
+  habits: [],
+  timeLogs: [],
+  expenses: [],
+  meals: [],
+  notes: [],
+  budget: 0,
+  xp: 0,
+  water: { date: '', count: 0 },
+  steps: { date: '', count: 0 },
+  badges: [],
+  streak: 0,
+  lastActive: ''
+};
+
+const XP_REWARDS = { task: 20, habit: 15, time: 10, expense: 5, meal: 10, note: 5 };
+const BADGES_DEF = [
+  { id: 'first_task', name: 'First Task', icon: '✅', cond: s => s.tasks.filter(t=>t.done).length >= 1 },
+  { id: 'task5', name: '5 Tasks', icon: '🏆', cond: s => s.tasks.filter(t=>t.done).length >= 5 },
+  { id: 'task20', name: '20 Tasks', icon: '🌟', cond: s => s.tasks.filter(t=>t.done).length >= 20 },
+  { id: 'habit_start', name: 'Habit Builder', icon: '🔥', cond: s => s.habits.length >= 1 },
+  { id: 'hydrated', name: 'Hydrated', icon: '💧', cond: s => s.water.count >= 8 },
+  { id: 'logger', name: 'Food Logger', icon: '🥗', cond: s => s.meals.length >= 5 },
+  { id: 'saver', name: 'Budget Saver', icon: '💰', cond: s => s.budget > 0 },
+  { id: 'focused', name: 'Focused', icon: '⏱️', cond: s => s.timeLogs.length >= 3 },
+  { id: 'noter', name: 'Note Taker', icon: '📝', cond: s => s.notes.length >= 3 },
+  { id: 'streak3', name: '3 Day Streak', icon: '🔥', cond: s => s.streak >= 3 },
+];
+
+function save() { localStorage.setItem('lifeos_state', JSON.stringify(state)); }
+function today() { return new Date().toISOString().split('T')[0]; }
+function fmt(n) { return Number(n || 0).toLocaleString('en-IN'); }
+
+// ========== XP & LEVEL ==========
+function addXP(amount) {
+  state.xp += amount;
+  save();
+  updateLevelUI();
+  checkBadges();
+}
+function getLevel() {
+  const xp = state.xp;
+  if(xp < 500) return { level: 1, next: 500 };
+  if(xp < 1200) return { level: 2, next: 1200 };
+  if(xp < 2500) return { level: 3, next: 2500 };
+  if(xp < 5000) return { level: 4, next: 5000 };
+  return { level: 5, next: 9999 };
+}
+function updateLevelUI() {
+  const { level, next } = getLevel();
+  const prev = level === 1 ? 0 : [0,500,1200,2500,5000][level-1];
+  const pct = Math.min(100, ((state.xp - prev) / (next - prev)) * 100);
+  document.getElementById('level-badge').textContent = `Lv ${level}`;
+  document.getElementById('xp-text').textContent = `${state.xp} / ${next} XP`;
+  document.getElementById('xp-fill').style.width = pct + '%';
+}
+function checkBadges() {
+  BADGES_DEF.forEach(b => {
+    if(!state.badges.includes(b.id) && b.cond(state)) {
+      state.badges.push(b.id);
+      toast(`🏆 Badge Unlocked: ${b.name}!`, 'success');
+      save();
+    }
+  });
+  renderBadges();
+}
+
+// ========== NAVIGATION ==========
+const sectionNames = { dashboard:'Dashboard', tasks:'Tasks', habits:'Habits', time:'Time Tracker', money:'Money', food:'Food & Health', notes:'Notes' };
+function navigate(id) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('sec-' + id).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => {
+    if(n.getAttribute('onclick') && n.getAttribute('onclick').includes("'" + id + "'")) n.classList.add('active');
+  });
+  document.getElementById('page-title').textContent = sectionNames[id] || id;
+  if(id === 'dashboard') renderDashboard();
+  if(id === 'tasks') renderTasks();
+  if(id === 'habits') renderHabits();
+  if(id === 'time') renderTimeSection();
+  if(id === 'money') renderMoneySection();
+  if(id === 'food') renderFoodSection();
+  if(id === 'notes') renderNotes();
+}
+
+// ========== TOAST ==========
+function toast(msg, type = 'info') {
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.textContent = msg;
+  document.getElementById('toast-container').appendChild(el);
+  setTimeout(() => el.remove(), 3500);
+}
+
+// ========== TASKS ==========
+function addTask() {
+  const val = document.getElementById('task-input').value.trim();
+  if(!val) return toast('Enter a task!', 'error');
+  state.tasks.push({
+    id: Date.now(), text: val,
+    priority: document.getElementById('task-priority').value,
+    date: document.getElementById('task-date').value || today(),
+    category: document.getElementById('task-cat').value || 'General',
+    done: false, created: today()
+  });
+  document.getElementById('task-input').value = '';
+  save(); renderTasks(); toast('Task added! +' + XP_REWARDS.task + ' XP', 'success');
+  addXP(XP_REWARDS.task);
+}
+let taskFilter = 'all';
+function filterTasks(f, el) {
+  taskFilter = f;
+  document.querySelectorAll('#task-filters .pill').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  renderTasks();
+}
+function renderTasks() {
+  const tod = today();
+  let tasks = [...state.tasks];
+  if(taskFilter === 'today') tasks = tasks.filter(t => t.date === tod);
+  if(taskFilter === 'pending') tasks = tasks.filter(t => !t.done);
+  if(taskFilter === 'done') tasks = tasks.filter(t => t.done);
+  const pMap = { high: 0, medium: 1, low: 2 };
+  tasks.sort((a, b) => (pMap[a.priority]||1) - (pMap[b.priority]||1));
+  const el = document.getElementById('tasks-list');
+  if(!tasks.length) { el.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:30px;font-size:13px;">No tasks here. Add one above! ✨</div>'; return; }
+  el.innerHTML = tasks.map(t => `
+    <div class="list-item ${t.done ? 'done' : ''}">
+      <button class="check-btn ${t.done?'done':''}" onclick="toggleTask(${t.id})">${t.done?'✓':''}</button>
+      <div style="flex:1;">
+        <div class="li-title">${t.text}</div>
+        <div class="li-sub">${t.category} • ${t.date} • <span class="tag tag-${t.priority==='high'?'red':t.priority==='medium'?'orange':'green'}" style="font-size:10px;">${t.priority}</span></div>
+      </div>
+      <div class="li-actions">
+        <button class="btn btn-danger btn-sm btn-icon" onclick="deleteTask(${t.id})">🗑️</button>
+      </div>
+    </div>`).join('');
+}
+function toggleTask(id) {
+  const t = state.tasks.find(t => t.id === id);
+  if(!t) return;
+  t.done = !t.done;
+  if(t.done) { addXP(XP_REWARDS.task); toast('Task complete! +' + XP_REWARDS.task + ' XP', 'success'); }
+  save(); renderTasks(); updateDashStats();
+}
+function deleteTask(id) {
+  state.tasks = state.tasks.filter(t => t.id !== id);
+  save(); renderTasks();
+}
+
+// ========== HABITS ==========
+function addHabit() {
+  const name = document.getElementById('habit-name').value.trim();
+  if(!name) return toast('Enter habit name!', 'error');
+  state.habits.push({
+    id: Date.now(), name, goal: document.getElementById('habit-goal').value || 'Daily',
+    color: document.getElementById('habit-color').value,
+    log: {}, streak: 0
+  });
+  document.getElementById('habit-name').value = '';
+  save(); renderHabits(); toast('Habit added!', 'success');
+}
+function renderHabits() {
+  const el = document.getElementById('habits-list');
+  if(!state.habits.length) { el.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:30px;">No habits yet. Build one above! 🔥</div>'; return; }
+  const days = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const week = [];
+  for(let i = 6; i >= 0; i--) {
+    const d = new Date(); d.setDate(d.getDate() - i);
+    week.push(d.toISOString().split('T')[0]);
+  }
+  el.innerHTML = state.habits.map(h => {
+    const done = h.log[today()] || false;
+    const pct = Math.round((Object.values(h.log).filter(Boolean).length / Math.max(1, Object.keys(h.log).length)) * 100);
+    const streakCount = calcStreak(h);
+    return `<div class="card" style="margin-bottom:10px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div style="width:10px;height:10px;border-radius:50%;background:${h.color};box-shadow:0 0 8px ${h.color}80;"></div>
+          <span style="font-weight:600;">${h.name}</span>
+          <span class="tag tag-cyan" style="font-size:10px;">${h.goal}</span>
+          <span class="tag tag-orange" style="font-size:10px;">🔥 ${streakCount} days</span>
+        </div>
+        <div style="display:flex;gap:4px;">
+          <button class="btn btn-sm ${done ? 'btn-primary' : 'btn-ghost'}" onclick="toggleHabit(${h.id})">${done ? '✓ Done' : 'Mark Done'}</button>
+          <button class="btn btn-danger btn-sm btn-icon" onclick="deleteHabit(${h.id})">🗑️</button>
+        </div>
+      </div>
+      <div class="habit-week">
+        ${week.map((d,i) => `<div class="habit-day ${h.log[d]?'done':''}" onclick="toggleHabitDay(${h.id},'${d}')" title="${d}">${days[i]}<br>${h.log[d]?'✓':''}</div>`).join('')}
+      </div>
+      <div style="margin-top:8px;">
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-dim);margin-bottom:4px;"><span>Completion rate</span><span>${pct}%</span></div>
+        <div class="prog-bar"><div class="prog-fill" style="width:${pct}%;background:${h.color};"></div></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+function calcStreak(h) {
+  let streak = 0, d = new Date();
+  while(true) {
+    const key = d.toISOString().split('T')[0];
+    if(h.log[key]) { streak++; d.setDate(d.getDate()-1); }
+    else break;
+    if(streak > 365) break;
+  }
+  return streak;
+}
+function toggleHabit(id) {
+  const h = state.habits.find(h => h.id === id);
+  if(!h) return;
+  h.log[today()] = !h.log[today()];
+  if(h.log[today()]) { addXP(XP_REWARDS.habit); toast('Habit logged! +' + XP_REWARDS.habit + ' XP', 'success'); }
+  save(); renderHabits(); updateDashStats();
+}
+function toggleHabitDay(id, date) {
+  const h = state.habits.find(h => h.id === id);
+  if(!h) return;
+  h.log[date] = !h.log[date];
+  save(); renderHabits();
+}
+function deleteHabit(id) {
+  state.habits = state.habits.filter(h => h.id !== id);
+  save(); renderHabits();
+}
+
+// ========== STOPWATCH ==========
+let swInterval = null, swRunning = false, swMs = 0;
+function swToggle() {
+  if(swRunning) {
+    clearInterval(swInterval); swRunning = false;
+    document.getElementById('sw-start').textContent = '▶ Resume';
+  } else {
+    const start = Date.now() - swMs;
+    swInterval = setInterval(() => { swMs = Date.now() - start; swUpdateDisplay(); }, 100);
+    swRunning = true;
+    document.getElementById('sw-start').textContent = '⏸ Pause';
+  }
+}
+function swReset() {
+  clearInterval(swInterval); swRunning = false; swMs = 0;
+  document.getElementById('stopwatch-display').textContent = '00:00:00';
+  document.getElementById('sw-start').textContent = '▶ Start';
+}
+function swUpdateDisplay() {
+  const h = Math.floor(swMs/3600000), m = Math.floor((swMs%3600000)/60000), s = Math.floor((swMs%60000)/1000);
+  document.getElementById('stopwatch-display').textContent = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+}
+function swSave() {
+  if(swMs < 1000) return toast('Timer too short!', 'error');
+  const hours = Math.round(swMs / 360000) / 10;
+  const act = document.getElementById('sw-activity').value || 'Session';
+  const cat = document.getElementById('sw-category').value;
+  state.timeLogs.push({ id: Date.now(), activity: act, category: cat, hours, date: today() });
+  addXP(XP_REWARDS.time); save(); swReset(); renderTimeSection();
+  toast(`Logged ${hours}h of ${act}!`, 'success');
+}
+function addManualTime() {
+  const act = document.getElementById('manual-activity').value.trim();
+  const hours = parseFloat(document.getElementById('manual-hours').value);
+  if(!act || !hours) return toast('Fill in activity and hours!', 'error');
+  state.timeLogs.push({
+    id: Date.now(), activity: act,
+    category: document.getElementById('manual-cat').value,
+    hours, date: document.getElementById('manual-date').value || today()
+  });
+  document.getElementById('manual-activity').value = '';
+  document.getElementById('manual-hours').value = '';
+  addXP(XP_REWARDS.time); save(); renderTimeSection();
+  toast('Time logged!', 'success');
+}
+
+// ========== POMODORO ==========
+let pomoInterval = null, pomoRunning = false, pomoSeconds = 0, pomoIsBreak = false, pomoSessions = 0;
+function pomoToggle() {
+  if(pomoRunning) {
+    clearInterval(pomoInterval); pomoRunning = false;
+    document.getElementById('pomo-start').textContent = '▶ Resume';
+  } else {
+    if(!pomoSeconds) {
+      pomoSeconds = parseInt(document.getElementById('pomo-work').value || 25) * 60;
+      pomoIsBreak = false;
+    }
+    pomoInterval = setInterval(pomoTick, 1000);
+    pomoRunning = true;
+    document.getElementById('pomo-start').textContent = '⏸ Pause';
+  }
+}
+function pomoTick() {
+  pomoSeconds--;
+  pomoUpdateDisplay();
+  if(pomoSeconds <= 0) {
+    if(!pomoIsBreak) {
+      pomoSessions++;
+      state.timeLogs.push({ id: Date.now(), activity: 'Pomodoro Session', category: 'Study', hours: parseFloat(document.getElementById('pomo-work').value || 25) / 60, date: today() });
+      addXP(XP_REWARDS.time * 2); save();
+      toast('🍅 Pomodoro complete! Take a break.', 'success');
+      pomoSeconds = parseInt(document.getElementById('pomo-break').value || 5) * 60;
+      pomoIsBreak = true;
+    } else {
+      toast('Break over! Time to focus.', 'info');
+      pomoSeconds = parseInt(document.getElementById('pomo-work').value || 25) * 60;
+      pomoIsBreak = false;
+    }
+    document.getElementById('pomo-mode').textContent = pomoIsBreak ? 'Break' : 'Focus';
+  }
+}
+function pomoUpdateDisplay() {
+  const m = Math.floor(pomoSeconds / 60), s = pomoSeconds % 60;
+  document.getElementById('pomo-display').textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  const workSecs = parseInt(document.getElementById('pomo-work').value || 25) * 60;
+  const breakSecs = parseInt(document.getElementById('pomo-break').value || 5) * 60;
+  const total = pomoIsBreak ? breakSecs : workSecs;
+  const pct = pomoSeconds / total;
+  const circumference = 427;
+  document.getElementById('pomo-ring-circle').style.strokeDashoffset = circumference * (1 - pct);
+  document.getElementById('pomo-ring-circle').style.stroke = pomoIsBreak ? 'var(--green)' : 'var(--cyan)';
+}
+function pomoReset() {
+  clearInterval(pomoInterval); pomoRunning = false; pomoSeconds = 0; pomoIsBreak = false;
+  document.getElementById('pomo-display').textContent = `${String(document.getElementById('pomo-work').value||25).padStart(2,'0')}:00`;
+  document.getElementById('pomo-ring-circle').style.strokeDashoffset = 0;
+  document.getElementById('pomo-mode').textContent = 'Focus';
+  document.getElementById('pomo-start').textContent = '▶ Start';
+}
+
+// ========== TIME CHARTS ==========
+let timeChart = null;
+function renderTimeSection() {
+  renderTimeHistory();
+  renderTimeChart();
+  updateDashStats();
+}
+function renderTimeHistory() {
+  const el = document.getElementById('time-history');
+  const logs = [...state.timeLogs].reverse().slice(0, 10);
+  if(!logs.length) { el.innerHTML = '<div style="color:var(--text-muted);text-align:center;padding:20px;font-size:13px;">No sessions yet. Start the timer!</div>'; return; }
+  el.innerHTML = logs.map(l => `
+    <div class="list-item">
+      <span style="font-size:18px;">⏱️</span>
+      <div style="flex:1;"><div class="li-title">${l.activity}</div><div class="li-sub">${l.category} • ${l.date}</div></div>
+      <div class="tag tag-cyan">${l.hours}h</div>
+      <button class="btn btn-danger btn-sm btn-icon" onclick="deleteTimeLog(${l.id})">🗑️</button>
+    </div>`).join('');
+}
+function deleteTimeLog(id) {
+  state.timeLogs = state.timeLogs.filter(l => l.id !== id);
+  save(); renderTimeSection();
+}
+function renderTimeChart() {
+  const ctx = document.getElementById('time-chart');
+  if(!ctx) return;
+  const labels = [], data = [];
+  for(let i = 6; i >= 0; i--) {
+    const d = new Date(); d.setDate(d.getDate() - i);
+    const key = d.toISOString().split('T')[0];
+    labels.push(['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()]);
+    data.push(state.timeLogs.filter(l => l.date === key).reduce((s, l) => s + l.hours, 0));
+  }
+  if(timeChart) timeChart.destroy();
+  timeChart = new Chart(ctx, {
+    type: 'line',
+    data: { labels, datasets: [{ label: 'Hours', data, borderColor: '#00d4ff', backgroundColor: 'rgba(0,212,255,0.1)', fill: true, tension: 0.4, pointBackgroundColor: '#00d4ff', pointRadius: 4, borderWidth: 2 }] },
+    options: { responsive: true, plugins: { legend: { display: false } }, scales: { x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#64748b', font: { size: 11 } } }, y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#64748b', font: { size: 11 } }, beginAtZero: true } } }
+  });
+}
+
+// ========== MONEY ==========
+function setBudget() {
+  const val = parseFloat(document.getElementById('budget-input').value);
+  if(!val || val <= 0) return toast('Enter valid budget!', 'error');
+  state.budget = val;
+  save(); renderMoneySection(); toast('Budget set!', 'success');
+}
+function addExpense() {
+  const name = document.getElementById('expense-name').value.trim();
+  const amount = parseFloat(document.getElementById('expense-amount').value);
+  if(!name || !amount) return toast('Fill in expense details!', 'error');
+  state.expenses.push({
+    id: Date.now(), name, amount,
+    category: document.getElementById('expense-cat').value,
+    date: document.getElementById('expense-date').value || today()
+  });
+  document.getElementById('expense-name').value = '';
+  document.getElementById('expense-amount').value = '';
+  addXP(XP_REWARDS.expense); save(); renderMoneySection();
+  toast(`Expense logged! ₹${fmt(amount)}`, 'success');
+}
+let moneyLineChart = null, moneyDonutChart = null;
+function renderMoneySection() {
+  const total = state.expenses.reduce((s, e) => s + e.amount, 0);
+  const todaySpent = state.expenses.filter(e => e.date === today()).reduce((s, e) => s + e.amount, 0);
+  document.getElementById('money-budget-disp').textContent = fmt(state.budget);
+  document.getElementById('money-spent-disp').textContent = fmt(total);
+  document.getElementById('money-today-disp').textContent = fmt(todaySpent);
+  document.getElementById('budget-remaining').textContent = `₹${fmt(Math.max(0, state.budget - total))} remaining`;
+  const pct = state.budget ? Math.min(100, (total / state.budget) * 100) : 0;
+  document.getElementById('budget-bar').style.width = pct + '%';
+  renderExpenseList();
+  renderMoneyCharts();
+}
+function renderExpenseList() {
+  const el = document.getElementById('expense-list');
+  const expenses = [...state.expenses].reverse().slice(0, 15);
+  if(!expenses.length) { el.innerHTML = '<div style="color:var(--text-muted);text-align:center;padding:20px;font-size:13px;">No expenses logged yet.</div>'; return; }
+  el.innerHTML = expenses.map(e => `
+    <div class="list-item">
+      <span style="font-size:18px;">💸</span>
+      <div style="flex:1;"><div class="li-title">${e.name}</div><div class="li-sub">${e.category} • ${e.date}</div></div>
+      <div class="tag tag-orange">₹${fmt(e.amount)}</div>
+      <button class="btn btn-danger btn-sm btn-icon" onclick="deleteExpense(${e.id})">🗑️</button>
+    </div>`).join('');
+}
+function deleteExpense(id) {
+  state.expenses = state.expenses.filter(e => e.id !== id);
+  save(); renderMoneySection();
+}
+function renderMoneyCharts() {
+  // Line chart - last 7 days
+  const lineCtx = document.getElementById('money-line-chart');
+  const lineLabels = [], lineData = [];
+  for(let i = 6; i >= 0; i--) {
+    const d = new Date(); d.setDate(d.getDate() - i);
+    const key = d.toISOString().split('T')[0];
+    lineLabels.push(['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()]);
+    lineData.push(state.expenses.filter(e => e.date === key).reduce((s, e) => s + e.amount, 0));
+  }
+  if(moneyLineChart) moneyLineChart.destroy();
+  moneyLineChart = new Chart(lineCtx, {
+    type: 'line',
+    data: { labels: lineLabels, datasets: [{ label: 'Spent (₹)', data: lineData, borderColor: '#f59e0b', backgroundColor: 'rgba(245,158,11,0.1)', fill: true, tension: 0.4, pointBackgroundColor: '#f59e0b', pointRadius: 4, borderWidth: 2 }] },
+    options: { responsive: true, plugins: { legend: { display: false } }, scales: { x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#64748b', font: { size: 11 } } }, y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#64748b', font: { size: 11 } }, beginAtZero: true } } }
+  });
+  // Donut chart - by category
+  const cats = {}, catColors = { Food:'#00d4ff', Transport:'#7c3aed', Shopping:'#f59e0b', Education:'#10b981', Entertainment:'#ec4899', Health:'#06b6d4', Other:'#94a3b8' };
+  state.expenses.forEach(e => { cats[e.category] = (cats[e.category] || 0) + e.amount; });
+  const donutCtx = document.getElementById('money-donut-chart');
+  if(moneyDonutChart) moneyDonutChart.destroy();
+  const catKeys = Object.keys(cats);
+  if(catKeys.length) {
+    moneyDonutChart = new Chart(donutCtx, {
+      type: 'doughnut',
+      data: { labels: catKeys, datasets: [{ data: catKeys.map(k => cats[k]), backgroundColor: catKeys.map(k => (catColors[k]||'#64748b') + '90'), borderColor: catKeys.map(k => catColors[k]||'#64748b'), borderWidth: 2 }] },
+      options: { responsive: true, cutout: '65%', plugins: { legend: { display: false } } }
+    });
+    document.getElementById('money-donut-legend').innerHTML = catKeys.map(k => `<div class="donut-leg-item"><div class="donut-leg-dot" style="background:${catColors[k]||'#64748b'};"></div><span style="color:var(--text-dim);">${k}</span><span style="margin-left:auto;font-weight:600;">₹${fmt(cats[k])}</span></div>`).join('');
+  }
+}
+
+// ========== FOOD ==========
+function addMeal() {
+  const name = document.getElementById('meal-name').value.trim();
+  if(!name) return toast('Enter meal name!', 'error');
+  state.meals.push({
+    id: Date.now(), name, type: document.getElementById('meal-type').value,
+    cals: parseFloat(document.getElementById('meal-cals').value) || 0,
+    protein: parseFloat(document.getElementById('meal-protein').value) || 0,
+    carbs: parseFloat(document.getElementById('meal-carbs').value) || 0,
+    fat: parseFloat(document.getElementById('meal-fat').value) || 0,
+    date: today()
+  });
+  document.getElementById('meal-name').value = '';
+  ['meal-cals','meal-protein','meal-carbs','meal-fat'].forEach(id => document.getElementById(id).value = '');
+  addXP(XP_REWARDS.meal); save(); renderFoodSection();
+  toast('Meal logged!', 'success');
+}
+function logSteps() {
+  const steps = parseInt(document.getElementById('steps-input').value);
+  if(!steps || steps <= 0) return toast('Enter valid step count!', 'error');
+  state.steps = { date: today(), count: steps };
+  save(); renderFoodSection(); toast('Steps logged!', 'success');
+}
+let foodLineChart = null, foodDonutChart = null, foodPieChart = null;
+function renderFoodSection() {
+  // Water setup
+  if(state.water.date !== today()) state.water = { date: today(), count: 0 };
+  if(state.steps.date !== today()) state.steps = { date: today(), count: 0 };
+  document.getElementById('water-count').textContent = state.water.count;
+  document.getElementById('steps-today').textContent = state.steps.count.toLocaleString();
+  const glasses = document.getElementById('water-glasses');
+  glasses.innerHTML = Array.from({length:8}, (_,i) => `<button class="glass-btn ${i<state.water.count?'filled':''}" onclick="addWater(${i})">💧</button>`).join('');
+  // Today macros
+  const todayMeals = state.meals.filter(m => m.date === today());
+  const totals = todayMeals.reduce((acc, m) => ({ cals: acc.cals+m.cals, protein: acc.protein+m.protein, carbs: acc.carbs+m.carbs, fat: acc.fat+m.fat }), { cals:0, protein:0, carbs:0, fat:0 });
+  document.getElementById('food-cals').textContent = Math.round(totals.cals);
+  document.getElementById('food-protein').textContent = Math.round(totals.protein) + 'g';
+  document.getElementById('food-carbs').textContent = Math.round(totals.carbs) + 'g';
+  document.getElementById('food-fat').textContent = Math.round(totals.fat) + 'g';
+  renderMealList(todayMeals);
+  renderFoodCharts(todayMeals, totals);
+}
+function addWater(idx) {
+  if(state.water.date !== today()) state.water = { date: today(), count: 0 };
+  state.water.count = idx + 1;
+  save(); renderFoodSection();
+  if(idx === 7) { toast('💧 Fully hydrated! Amazing!', 'success'); checkBadges(); }
+}
+function renderMealList(todayMeals) {
+  const el = document.getElementById('meal-list');
+  if(!todayMeals.length) { el.innerHTML = '<div style="color:var(--text-muted);text-align:center;padding:20px;font-size:13px;">No meals logged today. Start tracking! 🥗</div>'; return; }
+  el.innerHTML = todayMeals.map(m => `
+    <div class="list-item">
+      <span style="font-size:18px;">🍽️</span>
+      <div style="flex:1;"><div class="li-title">${m.name} <span class="tag tag-green" style="font-size:10px;">${m.type}</span></div>
+      <div class="li-sub">${m.cals} kcal • P:${m.protein}g C:${m.carbs}g F:${m.fat}g</div></div>
+      <button class="btn btn-danger btn-sm btn-icon" onclick="deleteMeal(${m.id})">🗑️</button>
+    </div>`).join('');
+}
+function deleteMeal(id) {
+  state.meals = state.meals.filter(m => m.id !== id);
+  save(); renderFoodSection();
+}
+function renderFoodCharts(todayMeals, totals) {
+  // Line chart - 7 day calories
+  const lineCtx = document.getElementById('food-line-chart');
+  const lineLabels = [], lineData = [];
+  for(let i = 6; i >= 0; i--) {
+    const d = new Date(); d.setDate(d.getDate() - i);
+    const key = d.toISOString().split('T')[0];
+    lineLabels.push(['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()]);
+    lineData.push(state.meals.filter(m => m.date === key).reduce((s, m) => s + m.cals, 0));
+  }
+  if(foodLineChart) foodLineChart.destroy();
+  foodLineChart = new Chart(lineCtx, {
+    type: 'line',
+    data: { labels: lineLabels, datasets: [{ label: 'Calories', data: lineData, borderColor: '#f59e0b', backgroundColor: 'rgba(245,158,11,0.1)', fill: true, tension: 0.4, pointBackgroundColor: '#f59e0b', pointRadius: 4, borderWidth: 2 }] },
+    options: { responsive: true, plugins: { legend: { display: false } }, scales: { x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#64748b', font:{size:11} } }, y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#64748b', font:{size:11} }, beginAtZero: true } } }
+  });
+  // Donut - macros
+  const donutCtx = document.getElementById('food-donut-chart');
+  if(foodDonutChart) foodDonutChart.destroy();
+  foodDonutChart = new Chart(donutCtx, {
+    type: 'doughnut',
+    data: { labels: ['Protein','Carbs','Fat'], datasets: [{ data: [totals.protein, totals.carbs, totals.fat], backgroundColor: ['rgba(0,212,255,0.5)','rgba(16,185,129,0.5)','rgba(124,58,237,0.5)'], borderColor: ['#00d4ff','#10b981','#7c3aed'], borderWidth: 2 }] },
+    options: { responsive: true, cutout: '60%', plugins: { legend: { display: false } } }
+  });
+  document.getElementById('food-donut-legend').innerHTML = [['Protein','#00d4ff',totals.protein+'g'],['Carbs','#10b981',totals.carbs+'g'],['Fat','#7c3aed',totals.fat+'g']].map(([l,c,v]) => `<div class="donut-leg-item"><div class="donut-leg-dot" style="background:${c};"></div><span style="color:var(--text-dim);">${l}</span><span style="margin-left:auto;font-weight:600;">${v}</span></div>`).join('');
+  // Pie - meal type breakdown
+  const pieCtx = document.getElementById('food-pie-chart');
+  const mealTypes = { Breakfast:0, Lunch:0, Dinner:0, Snack:0 };
+  todayMeals.forEach(m => { mealTypes[m.type] = (mealTypes[m.type]||0) + m.cals; });
+  if(foodPieChart) foodPieChart.destroy();
+  foodPieChart = new Chart(pieCtx, {
+    type: 'pie',
+    data: { labels: Object.keys(mealTypes), datasets: [{ data: Object.values(mealTypes), backgroundColor: ['rgba(0,212,255,0.6)','rgba(16,185,129,0.6)','rgba(124,58,237,0.6)','rgba(245,158,11,0.6)'], borderColor: ['#00d4ff','#10b981','#7c3aed','#f59e0b'], borderWidth: 2 }] },
+    options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { color: '#64748b', font: { size: 10 }, boxWidth: 10, padding: 8 } } } }
+  });
+}
+
+// ========== NOTES ==========
+let selectedSubject = 'General';
+function selectSubject(subj, el) {
+  selectedSubject = subj;
+  document.querySelectorAll('.subj-pill').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+}
+let noteFilter = 'all';
+function filterNotes(f, el) {
+  noteFilter = f;
+  document.querySelectorAll('#note-filter-pills .pill').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  renderNotes();
+}
+function saveNote() {
+  const title = document.getElementById('note-title').value.trim();
+  const body = document.getElementById('note-body').value.trim();
+  if(!title && !body) return toast('Write something first!', 'error');
+  state.notes.push({ id: Date.now(), title: title || 'Untitled', body, subject: selectedSubject, date: today() });
+  document.getElementById('note-title').value = '';
+  document.getElementById('note-body').value = '';
+  addXP(XP_REWARDS.note); save(); renderNotes();
+  toast('Note saved!', 'success');
+}
+function renderNotes() {
+  // Update filter pills
+  const subjects = ['all', ...new Set(state.notes.map(n => n.subject))];
+  const fp = document.getElementById('note-filter-pills');
+  fp.innerHTML = subjects.map(s => `<div class="pill ${noteFilter===s?'active':''}" onclick="filterNotes('${s}',this)">${s === 'all' ? 'All' : s}</div>`).join('');
+  let notes = [...state.notes].reverse();
+  if(noteFilter !== 'all') notes = notes.filter(n => n.subject === noteFilter);
+  const el = document.getElementById('notes-list');
+  if(!notes.length) { el.innerHTML = '<div style="color:var(--text-muted);text-align:center;padding:20px;font-size:13px;">No notes yet. Start writing! 📝</div>'; return; }
+  el.innerHTML = notes.map(n => `
+    <div class="card" style="margin-bottom:8px;cursor:pointer;" onclick="loadNote(${n.id})">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+        <span style="font-weight:600;font-size:13px;">${n.title}</span>
+        <button class="btn btn-danger btn-sm btn-icon" onclick="event.stopPropagation();deleteNote(${n.id})">🗑️</button>
+      </div>
+      <div style="font-size:11px;color:var(--text-dim);">${n.subject} • ${n.date}</div>
+      <div style="font-size:12px;color:var(--text-dim);margin-top:4px;overflow:hidden;max-height:40px;">${n.body.slice(0,100)}${n.body.length>100?'...':''}</div>
+    </div>`).join('');
+}
+function loadNote(id) {
+  const n = state.notes.find(n => n.id === id);
+  if(!n) return;
+  document.getElementById('note-title').value = n.title;
+  document.getElementById('note-body').value = n.body;
+  selectedSubject = n.subject;
+  document.querySelectorAll('.subj-pill').forEach(p => { p.classList.remove('active'); if(p.textContent === n.subject) p.classList.add('active'); });
+}
+function deleteNote(id) {
+  state.notes = state.notes.filter(n => n.id !== id);
+  save(); renderNotes();
+}
+
+// ========== DASHBOARD ==========
+let dashChart = null;
+function renderDashboard() {
+  document.getElementById('dash-date').textContent = new Date().toLocaleDateString('en-IN', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+  document.getElementById('dash-streak').textContent = '🔥 ' + state.streak + ' day streak';
+  updateDashStats();
+  renderBadges();
+  renderDashTasks();
+  renderDashChart();
+}
+function updateDashStats() {
+  const tod = today();
+  document.getElementById('ds-tasks').textContent = state.tasks.filter(t => t.done && t.date === tod).length;
+  document.getElementById('ds-habits').textContent = state.habits.filter(h => h.log[tod]).length;
+  const todayHours = state.timeLogs.filter(l => l.date === tod).reduce((s, l) => s + l.hours, 0);
+  document.getElementById('ds-time').textContent = todayHours.toFixed(1) + 'h';
+  const todayMoney = state.expenses.filter(e => e.date === tod).reduce((s, e) => s + e.amount, 0);
+  document.getElementById('ds-money').textContent = '₹' + fmt(todayMoney);
+}
+function renderDashTasks() {
+  const tod = today();
+  const tasks = state.tasks.filter(t => t.date === tod).slice(0, 5);
+  const el = document.getElementById('dash-tasks-list');
+  if(!tasks.length) { el.innerHTML = '<div style="color:var(--text-muted);font-size:12px;text-align:center;padding:16px;">No tasks for today. Go add some!</div>'; return; }
+  el.innerHTML = tasks.map(t => `<div class="list-item ${t.done?'done':''}"><div class="check-btn ${t.done?'done':''}">${t.done?'✓':''}</div><div class="li-title">${t.text}</div></div>`).join('');
+}
+function renderBadges() {
+  const el = document.getElementById('dash-badges');
+  if(!el) return;
+  el.innerHTML = BADGES_DEF.map(b => `<div class="badge ${state.badges.includes(b.id)?'earned':''}">${b.icon} ${b.name}</div>`).join('');
+}
+function renderDashChart() {
+  const ctx = document.getElementById('dash-chart');
+  if(!ctx) return;
+  const labels = [], taskData = [], habitData = [], timeData = [];
+  for(let i = 6; i >= 0; i--) {
+    const d = new Date(); d.setDate(d.getDate() - i);
+    const key = d.toISOString().split('T')[0];
+    labels.push(['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()]);
+    taskData.push(state.tasks.filter(t => t.done && t.date === key).length);
+    habitData.push(state.habits.filter(h => h.log[key]).length);
+    timeData.push(state.timeLogs.filter(l => l.date === key).reduce((s, l) => s + l.hours, 0));
+  }
+  if(dashChart) dashChart.destroy();
+  dashChart = new Chart(ctx, {
+    type: 'line',
+    data: { labels, datasets: [
+      { label: 'Tasks', data: taskData, borderColor: '#00d4ff', backgroundColor: 'rgba(0,212,255,0.08)', fill: true, tension: 0.4, pointRadius: 3, borderWidth: 2 },
+      { label: 'Habits', data: habitData, borderColor: '#7c3aed', backgroundColor: 'rgba(124,58,237,0.08)', fill: true, tension: 0.4, pointRadius: 3, borderWidth: 2 },
+      { label: 'Study hrs', data: timeData, borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.08)', fill: true, tension: 0.4, pointRadius: 3, borderWidth: 2 }
+    ]},
+    options: { responsive: true, plugins: { legend: { labels: { color: '#64748b', font: { size: 11 }, boxWidth: 10 } } }, scales: { x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#64748b', font:{size:11} } }, y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#64748b', font:{size:11} }, beginAtZero: true } } }
+  });
+}
+
+// ========== THEME ==========
+let isLight = false;
+function toggleTheme() {
+  isLight = !isLight;
+  if(isLight) {
+    document.documentElement.style.setProperty('--bg','#f0f4f8');
+    document.documentElement.style.setProperty('--bg2','#e2e8f0');
+    document.documentElement.style.setProperty('--card','rgba(0,0,0,0.04)');
+    document.documentElement.style.setProperty('--card-border','rgba(0,0,0,0.1)');
+    document.documentElement.style.setProperty('--card-hover','rgba(0,0,0,0.07)');
+    document.documentElement.style.setProperty('--text','#1e293b');
+    document.documentElement.style.setProperty('--text-dim','#475569');
+    document.documentElement.style.setProperty('--text-muted','#94a3b8');
+    document.getElementById('theme-toggle').textContent = '🌙 Dark';
+  } else {
+    document.documentElement.style.setProperty('--bg','#07090f');
+    document.documentElement.style.setProperty('--bg2','#0d1117');
+    document.documentElement.style.setProperty('--card','rgba(255,255,255,0.04)');
+    document.documentElement.style.setProperty('--card-border','rgba(255,255,255,0.08)');
+    document.documentElement.style.setProperty('--card-hover','rgba(255,255,255,0.07)');
+    document.documentElement.style.setProperty('--text','#e2e8f0');
+    document.documentElement.style.setProperty('--text-dim','#64748b');
+    document.documentElement.style.setProperty('--text-muted','#334155');
+    document.getElementById('theme-toggle').textContent = '☀️ Light';
+  }
+}
+
+// ========== VOICE ==========
+let recognition = null, voiceActive = false;
+function toggleVoice() {
+  if(!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+    return toast('❌ Voice not supported — please use Chrome or Edge!', 'error');
+  }
+  if(voiceActive) {
+    try { recognition.stop(); } catch(e){}
+    voiceActive = false;
+    document.getElementById('voice-btn').classList.remove('listening');
+    document.getElementById('voice-status').textContent = '';
+    return;
+  }
+  // Check mic permission first
+  if(navigator.permissions) {
+    navigator.permissions.query({name:'microphone'}).then(p => {
+      if(p.state === 'denied') {
+        toast('❌ Microphone blocked! Allow mic in browser settings.', 'error');
+        return;
+      }
+      startRecognition();
+    }).catch(() => startRecognition());
+  } else {
+    startRecognition();
+  }
+}
+function startRecognition() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  recognition = new SR();
+  recognition.lang = 'en-IN';
+  recognition.continuous = true;
+  recognition.interimResults = true;
+  recognition.maxAlternatives = 1;
+
+  recognition.onstart = () => {
+    voiceActive = true;
+    document.getElementById('voice-btn').classList.add('listening');
+    document.getElementById('voice-status').textContent = '🎤 Listening...';
+  };
+
+  recognition.onresult = e => {
+    let interim = '', final = '';
+    for(let i = e.resultIndex; i < e.results.length; i++) {
+      if(e.results[i].isFinal) final += e.results[i][0].transcript;
+      else interim += e.results[i][0].transcript;
+    }
+    if(interim) document.getElementById('voice-status').textContent = '🎤 ' + interim + '...';
+    if(final) {
+      const cmd = final.toLowerCase().trim();
+      document.getElementById('voice-status').textContent = '✅ "' + cmd + '"';
+      handleVoiceCommand(cmd);
+      setTimeout(() => {
+        if(voiceActive) document.getElementById('voice-status').textContent = '🎤 Listening...';
+      }, 2500);
+    }
+  };
+
+  recognition.onerror = e => {
+    const msgs = {
+      'not-allowed': '❌ Mic permission denied — click the 🔒 in your browser address bar and allow microphone.',
+      'no-speech': '🔇 No speech detected. Try again.',
+      'audio-capture': '❌ No microphone found on this device.',
+      'network': '❌ Network error with speech service.',
+      'aborted': ''
+    };
+    const msg = msgs[e.error] || ('❌ Voice error: ' + e.error);
+    if(msg) toast(msg, 'error');
+    voiceActive = false;
+    document.getElementById('voice-btn').classList.remove('listening');
+    document.getElementById('voice-status').textContent = '';
+  };
+
+  recognition.onend = () => {
+    // Auto-restart if still supposed to be active
+    if(voiceActive) {
+      try { recognition.start(); } catch(e) {
+        voiceActive = false;
+        document.getElementById('voice-btn').classList.remove('listening');
+        document.getElementById('voice-status').textContent = '';
+      }
+    } else {
+      document.getElementById('voice-btn').classList.remove('listening');
+      setTimeout(() => document.getElementById('voice-status').textContent = '', 3000);
+    }
+  };
+
+  try {
+    recognition.start();
+  } catch(e) {
+    toast('❌ Could not start voice: ' + e.message, 'error');
+  }
+}
+function handleVoiceCommand(cmd) {
+  if(cmd.includes('add task') || cmd.includes('new task')) {
+    const name = cmd.replace(/add task|new task/gi,'').trim();
+    if(name) {
+      state.tasks.push({ id: Date.now(), text: name, priority: 'medium', date: today(), category: 'Voice', done: false, created: today() });
+      addXP(XP_REWARDS.task); save(); renderTasks();
+      toast('✅ Task added: ' + name, 'success');
+      navigate('tasks');
+    }
+  } else if(cmd.includes('add expense') || cmd.includes('spent')) {
+    const match = cmd.match(/(\d+)/);
+    if(match) {
+      const amount = parseFloat(match[1]);
+      const name = cmd.replace(/add expense|spent|\d+/gi,'').trim() || 'Voice expense';
+      state.expenses.push({ id: Date.now(), name, amount, category: 'Other', date: today() });
+      addXP(XP_REWARDS.expense); save(); renderMoneySection();
+      toast('💸 Expense: ₹' + amount, 'success');
+      navigate('money');
+    }
+  } else if(cmd.includes('add habit') || cmd.includes('new habit')) {
+    const name = cmd.replace(/add habit|new habit/gi,'').trim();
+    if(name) {
+      state.habits.push({ id: Date.now(), name, goal: 'Daily', color: '#00d4ff', log: {}, streak: 0 });
+      save(); renderHabits();
+      toast('🔥 Habit added: ' + name, 'success');
+      navigate('habits');
+    }
+  } else if(cmd.includes('dashboard')) { navigate('dashboard'); }
+  else if(cmd.includes('tasks')) { navigate('tasks'); }
+  else if(cmd.includes('habits')) { navigate('habits'); }
+  else if(cmd.includes('money') || cmd.includes('expense')) { navigate('money'); }
+  else if(cmd.includes('food') || cmd.includes('health')) { navigate('food'); }
+  else if(cmd.includes('notes')) { navigate('notes'); }
+  else if(cmd.includes('time')) { navigate('time'); }
+  else { toast('Command: "' + cmd + '" — try "add task [name]", "spent [amount]", or section names', 'info'); }
+}
+
+// ========== STREAK ==========
+function updateStreak() {
+  const last = state.lastActive;
+  const tod = today();
+  if(last === tod) return;
+  const yesterday = new Date(); yesterday.setDate(yesterday.getDate()-1);
+  const yKey = yesterday.toISOString().split('T')[0];
+  if(last === yKey) state.streak++;
+  else if(last !== tod) state.streak = 1;
+  state.lastActive = tod;
+  save();
+}
+
+// ========== INIT ==========
+Chart.defaults.color = '#64748b';
+Chart.defaults.font.family = "'Space Grotesk', sans-serif";
+updateStreak();
+updateLevelUI();
+renderDashboard();
+checkBadges();
+</script>
+</body>
+</html>

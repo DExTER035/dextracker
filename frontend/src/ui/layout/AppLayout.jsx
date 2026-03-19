@@ -12,7 +12,7 @@ import {
   Settings,
   Target,
 } from 'lucide-react'
-import { supabase } from '../../lib/supabase.js'
+
 import { Badge } from '../components/ui.jsx'
 import { cn } from '../utils/cn.js'
 
@@ -57,7 +57,7 @@ export function AppLayout() {
   const navigate = useNavigate()
 
   async function onSignOut() {
-    await supabase.auth.signOut()
+      await logout()
     navigate('/login')
   }
 

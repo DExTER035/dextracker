@@ -1,0 +1,7 @@
+{
+  "theme": "dark",
+  "voiceAssistant": true,
+  "notifications": true,
+  "accentColor": "#22c55e",
+  "accentId": "green"
+}

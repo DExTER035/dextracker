@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { supabase } from '../../lib/supabase.js'
+import { fetchApi } from '../../lib/api.js'
 import { XP, addXp } from '../../lib/xp.js'
 import { useAuth } from '../../providers/AuthProvider.jsx'
 import { EmptyState } from '../../ui/components/EmptyState.jsx'
@@ -17,8 +17,13 @@ export function GoalsPage() {
   useEffect(() => {
     if (!user?.id) return
     ;(async () => {
-      const { data } = await supabase.from('goals').select('*').eq('user_id', user.id).order('created_at', { ascending: false })
-      setGoals(data ?? [])
+      try {
+        const data = await fetchApi(`/api/${user.id}/goals`)
+        const sorted = (data ?? []).sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt))
+        setGoals(sorted)
+      } catch (err) {
+        toast.push({ tone: 'danger', text: 'Error loading goals' })
+      }
     })()
   }, [user?.id])
 
@@ -26,15 +31,17 @@ export function GoalsPage() {
     if (!user?.id) return
     const t = title.trim()
     if (!t) return
-    const { data, error } = await supabase
-      .from('goals')
-      .insert({ user_id: user.id, title: t, deadline: deadline || null, milestones: [], progress: 0 })
-      .select('*')
-      .single()
-    if (error) return toast.push({ tone: 'danger', text: error.message })
-    setGoals((x) => [data, ...x])
-    setTitle('')
-    setDeadline('')
+    try {
+      const data = await fetchApi(`/api/${user.id}/goals`, {
+        method: 'POST',
+        body: JSON.stringify({ title: t, deadline: deadline || null })
+      })
+      setGoals((x) => [data, ...x])
+      setTitle('')
+      setDeadline('')
+    } catch (err) {
+      toast.push({ tone: 'danger', text: err.message })
+    }
   }
 
   async function addMilestone(goalId, text) {
@@ -45,9 +52,12 @@ export function GoalsPage() {
     if (!t) return
     const next = [...(g.milestones ?? []), { id: crypto.randomUUID?.() ?? String(Math.random()), text: t, done: false }]
     const progress = next.length ? Math.round((next.filter((m) => m.done).length / next.length) * 100) : 0
-    const { error } = await supabase.from('goals').update({ milestones: next, progress }).eq('id', goalId)
-    if (error) return toast.push({ tone: 'danger', text: error.message })
-    setGoals((x) => x.map((y) => (y.id === goalId ? { ...y, milestones: next, progress } : y)))
+    try {
+      await fetchApi(`/api/${user.id}/goals/${goalId}`, { method: 'PATCH', body: JSON.stringify({ milestones: next, progress }) })
+      setGoals((x) => x.map((y) => (y.id === goalId ? { ...y, milestones: next, progress } : y)))
+    } catch (err) {
+      toast.push({ tone: 'danger', text: err.message })
+    }
   }
 
   async function toggleMilestone(goalId, mid) {
@@ -56,20 +66,24 @@ export function GoalsPage() {
     if (!g) return
     const next = (g.milestones ?? []).map((m) => (m.id === mid ? { ...m, done: !m.done } : m))
     const progress = next.length ? Math.round((next.filter((m) => m.done).length / next.length) * 100) : 0
-    const { error } = await supabase.from('goals').update({ milestones: next, progress }).eq('id', goalId)
-    if (error) return toast.push({ tone: 'danger', text: error.message })
-    setGoals((x) => x.map((y) => (y.id === goalId ? { ...y, milestones: next, progress } : y)))
-    const changed = (g.milestones ?? []).find((m) => m.id === mid)
-    if (changed && !changed.done) {
-      const r = await addXp(user.id, XP.milestone)
-      if (r.ok) toast.push({ tone: 'success', text: `+${XP.milestone} XP` })
+    try {
+      await fetchApi(`/api/${user.id}/goals/${goalId}`, { method: 'PATCH', body: JSON.stringify({ milestones: next, progress }) })
+      setGoals((x) => x.map((y) => (y.id === goalId ? { ...y, milestones: next, progress } : y)))
+      const changed = (g.milestones ?? []).find((m) => m.id === mid)
+      if (changed && !changed.done) {
+        const r = await addXp(user.id, XP.milestone, 'Completed Milestone')
+        if (r.ok) toast.push({ tone: 'success', text: `+${XP.milestone} XP` })
+      }
+    } catch (err) {
+      toast.push({ tone: 'danger', text: err.message })
     }
   }
 
   async function deleteGoal(goalId) {
-    const { error } = await supabase.from('goals').delete().eq('id', goalId)
-    if (error) return toast.push({ tone: 'danger', text: error.message })
-    setGoals((x) => x.filter((y) => y.id !== goalId))
+    try {
+      await fetchApi(`/api/${user.id}/goals/${goalId}`, { method: 'DELETE' })
+      setGoals((x) => x.filter((y) => y.id !== goalId))
+    } catch (err) {}
   }
 
   const streak = useMemo(() => {

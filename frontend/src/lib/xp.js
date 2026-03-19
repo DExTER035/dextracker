@@ -1,4 +1,4 @@
-import { supabase } from './supabase.js'
+import { fetchApi } from './api.js'
 
 export const XP = {
   task: 20,
@@ -12,29 +12,28 @@ export const XP = {
 }
 
 export function levelFromXp(xp) {
-  const level = Math.floor(xp / 500) + 1
-  const into = xp % 500
+  const level = Math.floor((xp || 0) / 500) + 1
+  const into = (xp || 0) % 500
   return { level, into, next: 500 }
 }
 
-export async function addXp(userId, delta) {
+export async function addXp(userId, delta, reason = 'activity') {
   if (!userId || !delta) return { ok: false, error: 'missing' }
-  const { data: profile, error } = await supabase
-    .from('profiles')
-    .select('xp, level')
-    .eq('id', userId)
-    .single()
-  if (error) return { ok: false, error: error.message }
-
-  const nextXp = Math.max(0, (profile?.xp ?? 0) + delta)
-  const { level } = levelFromXp(nextXp)
-
-  const { error: upErr } = await supabase
-    .from('profiles')
-    .update({ xp: nextXp, level })
-    .eq('id', userId)
-
-  if (upErr) return { ok: false, error: upErr.message }
-  return { ok: true, xp: nextXp, level }
+  try {
+    const data = await fetchApi(`/api/${userId}/xp`, {
+      method: 'POST',
+      body: JSON.stringify({ amount: delta, reason })
+    })
+    
+    // Also save simple XP history event
+    await fetchApi(`/api/${userId}/xp-history`, {
+      method: 'POST',
+      body: JSON.stringify({ amount: delta, reason, time: new Date().toISOString() })
+    })
+    
+    return { ok: true, xp: data.xp, level: data.level, badges: data.newBadges || [] }
+  } catch (err) {
+    return { ok: false, error: err.message }
+  }
 }
 

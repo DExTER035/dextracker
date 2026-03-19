@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { BarChart, Bar, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import { supabase } from '../../lib/supabase.js'
-import { isoDays } from '../../lib/date.js'
+import { fetchApi } from '../../lib/api.js'
+import { isoDays, todayISO } from '../../lib/date.js'
 import { useAuth } from '../../providers/AuthProvider.jsx'
 import { Tabs } from '../../ui/components/Tabs.jsx'
 import { EmptyState } from '../../ui/components/EmptyState.jsx'
@@ -33,11 +33,15 @@ export function StudyPage() {
   useEffect(() => {
     if (!user?.id) return
     ;(async () => {
-      const { data } = await supabase.from('study_sessions').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(200)
-      setSessions(data ?? [])
+      try {
+        const data = await fetchApi(`/api/${user.id}/study`)
+        const sorted = (data ?? []).sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt))
+        setSessions(sorted.slice(0, 200))
+      } catch (err) {
+        toast.push({ tone: 'danger', text: 'Failed to load study sessions.' })
+      }
     })()
   }, [user?.id])
-
   useEffect(() => {
     if (!running) return
     tickRef.current = window.setInterval(() => setElapsed((x) => x + 1), 1000)
@@ -54,16 +58,18 @@ export function StudyPage() {
     if (!user?.id) return
     const durMin = Math.max(1, Math.round(elapsed / 60))
     const subj = subject.trim() || 'General'
-    const { data, error } = await supabase
-      .from('study_sessions')
-      .insert({ user_id: user.id, subject: subj, duration: durMin, type: 'timer' })
-      .select('*')
-      .single()
-    if (error) return toast.push({ tone: 'danger', text: error.message })
-    setSessions((x) => [data, ...x])
-    setElapsed(0)
-    setRunning(false)
-    toast.push({ tone: 'success', text: 'Session saved.' })
+    try {
+      const data = await fetchApi(`/api/${user.id}/study`, {
+        method: 'POST',
+        body: JSON.stringify({ subject: subj, duration: durMin, type: 'timer', date: todayISO() })
+      })
+      setSessions((x) => [data, ...x])
+      setElapsed(0)
+      setRunning(false)
+      toast.push({ tone: 'success', text: 'Session saved.' })
+    } catch (error) {
+       toast.push({ tone: 'danger', text: error.message })
+    }
   }
 
   useEffect(() => {
@@ -94,8 +100,8 @@ export function StudyPage() {
     const days = isoDays(7)
     const map = new Map(days.map((d) => [d, 0]))
     for (const s of sessions) {
-      const d = new Date(s.created_at).toISOString().slice(0, 10)
-      if (map.has(d)) map.set(d, map.get(d) + Number(s.duration ?? 0))
+      const d = s.date || (s.createdAt ? new Date(s.createdAt).toISOString().slice(0, 10) : '')
+      if (d && map.has(d)) map.set(d, map.get(d) + Number(s.duration ?? 0))
     }
     return days.map((d) => ({ date: d.slice(5), hours: Number((map.get(d) / 60).toFixed(1)) }))
   }, [sessions])
@@ -144,7 +150,7 @@ export function StudyPage() {
             </div>
           </div>
           <div className="mt-6 text-5xl font-bold text-text mono">{fmt(elapsed)}</div>
-          <div className="mt-2 text-sm text-muted">Save writes a session to Supabase when stopped.</div>
+          <div className="mt-2 text-sm text-muted">Save writes a session to your custom backend when stopped.</div>
         </Card>
       ) : null}
 

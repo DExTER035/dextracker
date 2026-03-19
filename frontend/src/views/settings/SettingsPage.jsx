@@ -1,76 +1,86 @@
 import { useMemo, useState } from 'react'
-import { supabase } from '../../lib/supabase.js'
+import { fetchApi } from '../../lib/api.js'
 import { useAuth } from '../../providers/AuthProvider.jsx'
 import { useToast } from '../../ui/components/ToastProvider.jsx'
 import { Badge, Button, Card, Input, SectionLabel } from '../../ui/components/ui.jsx'
 import { PageShell } from '../_shared/PageShell.jsx'
 
 export function SettingsPage() {
-  const { user, profile, settings } = useAuth()
+  const { user } = useAuth()
   const toast = useToast()
-  const [name, setName] = useState(profile?.name ?? '')
-  const [avatar, setAvatar] = useState(profile?.avatar ?? '')
-  const [geminiKey, setGeminiKey] = useState(settings?.gemini_key ?? '')
-  const [theme, setTheme] = useState(settings?.theme ?? 'dark')
-  const [language, setLanguage] = useState(settings?.language ?? 'English')
-  const [plannerColor, setPlannerColor] = useState(settings?.section_colors?.planner ?? '#00d4aa')
-  const [healthColor, setHealthColor] = useState(settings?.section_colors?.health ?? '#00d4aa')
-  const [financeColor, setFinanceColor] = useState(settings?.section_colors?.finance ?? '#00d4aa')
-  const [notify, setNotify] = useState(!!settings?.notification_prefs?.enabled)
+  const [name, setName] = useState(user?.name ?? '')
+  const [avatar, setAvatar] = useState(user?.avatar ?? '')
+  const [geminiKey, setGeminiKey] = useState(user?.settings?.gemini_key ?? '')
+  const [theme, setTheme] = useState(user?.settings?.theme ?? 'dark')
+  const [language, setLanguage] = useState(user?.settings?.language ?? 'English')
+  const [plannerColor, setPlannerColor] = useState(user?.settings?.section_colors?.planner ?? '#00d4aa')
+  const [healthColor, setHealthColor] = useState(user?.settings?.section_colors?.health ?? '#fb7185')
+  const [financeColor, setFinanceColor] = useState(user?.settings?.section_colors?.finance ?? '#00d4aa')
+  const [notify, setNotify] = useState(!!user?.settings?.notification_prefs?.enabled)
 
-  const email = useMemo(() => profile?.email ?? user?.email ?? '', [profile?.email, user?.email])
+  const email = useMemo(() => user?.email ?? '', [user?.email])
 
   async function saveProfile() {
     if (!user?.id) return
-    const { error } = await supabase
-      .from('profiles')
-      .update({ name: name.trim() || null, avatar: avatar.trim() || null })
-      .eq('id', user.id)
-    if (error) return toast.push({ tone: 'danger', text: error.message })
-    toast.push({ tone: 'success', text: 'Profile saved.' })
+    try {
+      const freshUser = await fetchApi(`/api/auth/user/${user.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ name: name.trim() || null, avatar: avatar.trim() || null })
+      })
+      localStorage.setItem('dextracker_user', JSON.stringify(freshUser))
+      toast.push({ tone: 'success', text: 'Profile saved. Refreshing...' })
+      setTimeout(() => window.location.reload(), 1000)
+    } catch (err) {
+      toast.push({ tone: 'danger', text: err.message })
+    }
   }
 
   async function saveSettings() {
     if (!user?.id) return
     const section_colors = { planner: plannerColor, health: healthColor, finance: financeColor }
     const notification_prefs = { enabled: notify }
-    const { error } = await supabase
-      .from('user_settings')
-      .upsert(
-        { user_id: user.id, gemini_key: geminiKey.trim() || null, theme, language, section_colors, notification_prefs },
-        { onConflict: 'user_id' },
-      )
-    if (error) return toast.push({ tone: 'danger', text: error.message })
-    toast.push({ tone: 'success', text: 'Settings saved.' })
+    const newSettings = { gemini_key: geminiKey.trim() || null, theme, language, section_colors, notification_prefs }
+    try {
+      const freshUser = await fetchApi(`/api/auth/user/${user.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ settings: newSettings })
+      })
+      localStorage.setItem('dextracker_user', JSON.stringify(freshUser))
+      toast.push({ tone: 'success', text: 'Settings saved. Refreshing...' })
+      setTimeout(() => window.location.reload(), 1000)
+    } catch (err) {
+      toast.push({ tone: 'danger', text: err.message })
+    }
   }
 
   async function exportAll() {
     if (!user?.id) return
-    const tables = [
-      'profiles',
-      'tasks',
-      'habits',
-      'mood_logs',
-      'journal_entries',
-      'health_food',
-      'health_water',
-      'health_sleep',
-      'health_weight',
-      'finance_transactions',
-      'goals',
-      'study_sessions',
-      'fitness_workouts',
-      'user_settings',
+    const endpoints = [
+      `/api/auth/user/${user.id}`,
+      `/api/${user.id}/tasks`,
+      `/api/${user.id}/habits`,
+      `/api/${user.id}/mood`,
+      `/api/${user.id}/journal`,
+      `/api/${user.id}/food`,
+      `/api/${user.id}/health`,
+      `/api/${user.id}/sleep`,
+      `/api/${user.id}/body`,
+      `/api/${user.id}/money`,
+      `/api/${user.id}/budget`,
+      `/api/${user.id}/study`,
+      `/api/${user.id}/goals`,
+      `/api/${user.id}/xp-history`,
     ]
     const results = {}
-    for (const t of tables) {
-      const col = t === 'profiles' ? 'id' : t === 'user_settings' ? 'user_id' : 'user_id'
-      const { data, error } = await supabase.from(t).select('*').eq(col, user.id)
-      if (error) {
-        toast.push({ tone: 'danger', text: `Export failed: ${t}` })
-        return
+    
+    for (const ep of endpoints) {
+      try {
+        const data = await fetchApi(ep)
+        const name = ep.split('/').pop()
+        results[name === user.id ? 'profile' : name] = data ?? []
+      } catch (error) {
+        toast.push({ tone: 'danger', text: `Export failed for: ${ep}` })
       }
-      results[t] = data ?? []
     }
     const blob = new Blob([JSON.stringify(results, null, 2)], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
@@ -104,7 +114,7 @@ export function SettingsPage() {
           <Input value={geminiKey} onChange={(e) => setGeminiKey(e.target.value)} placeholder="Gemini API key" />
           <Button onClick={saveSettings}>Save</Button>
         </div>
-        <div className="mt-2 text-xs text-muted">Saved to Supabase `user_settings` for your account.</div>
+        <div className="mt-2 text-xs text-muted">Saved to your custom backend profile settings.</div>
       </Card>
 
       <Card>
@@ -161,7 +171,7 @@ export function SettingsPage() {
 
       <Card>
         <SectionLabel>Export</SectionLabel>
-        <div className="mt-3 text-sm text-muted">Download all your Supabase data as JSON.</div>
+        <div className="mt-3 text-sm text-muted">Download all your local backend data as JSON.</div>
         <div className="mt-4">
           <Button onClick={exportAll}>Export JSON</Button>
         </div>

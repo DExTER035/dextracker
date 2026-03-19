@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { LineChart, Line, ResponsiveContainer, XAxis, YAxis, Tooltip, BarChart, Bar } from 'recharts'
-import { supabase } from '../../lib/supabase.js'
+import { fetchApi } from '../../lib/api.js'
 import { isoDays, todayISO } from '../../lib/date.js'
 import { useAuth } from '../../providers/AuthProvider.jsx'
 import { Tabs } from '../../ui/components/Tabs.jsx'
@@ -39,43 +39,49 @@ export function HealthPage() {
   useEffect(() => {
     if (!user?.id) return
     ;(async () => {
-      const [foodRes, waterRes, sleepRes, weightRes] = await Promise.all([
-        supabase
-          .from('health_food')
-          .select('*')
-          .eq('user_id', user.id)
-          .gte('created_at', `${today}T00:00:00Z`)
-          .lte('created_at', `${today}T23:59:59Z`)
-          .order('created_at', { ascending: false }),
-        supabase.from('health_water').select('*').eq('user_id', user.id).eq('date', today).maybeSingle(),
-        supabase.from('health_sleep').select('*').eq('user_id', user.id).eq('date', today).maybeSingle(),
-        supabase.from('health_weight').select('*').eq('user_id', user.id).eq('date', today).maybeSingle(),
-      ])
-      setFood(foodRes.data ?? [])
-      setWater(waterRes.data ?? { glasses: 0 })
-      setSleep(sleepRes.data ? { hours: String(sleepRes.data.hours ?? ''), quality: sleepRes.data.quality ?? 3 } : { hours: '', quality: 3 })
-      setWeight(weightRes.data ? { weight: String(weightRes.data.weight ?? '') } : { weight: '' })
+      try {
+        const [foodData, healthData, sleepData, bodyData] = await Promise.all([
+          fetchApi(`/api/${user.id}/food`),
+          fetchApi(`/api/${user.id}/health`),
+          fetchApi(`/api/${user.id}/sleep`),
+          fetchApi(`/api/${user.id}/body`),
+        ])
+        
+        const todaysFood = foodData.filter(x => x.date?.startsWith(today) || x.createdAt?.startsWith(today))
+        setFood(todaysFood.reverse() || [])
+        
+        const todaysHealth = healthData.filter(h => h.date === today)
+        const waterLog = todaysHealth.find(h => h.type === 'water')
+        setWater(waterLog ?? { glasses: 0, amount: 0 })
+        
+        const todaysSleep = sleepData.find(s => s.date === today)
+        setSleep(todaysSleep ? { hours: String(todaysSleep.hours ?? ''), quality: todaysSleep.quality ?? 3 } : { hours: '', quality: 3 })
+        
+        const todaysBody = bodyData.find(b => b.date === today)
+        setWeight(todaysBody ? { weight: String(todaysBody.weight ?? '') } : { weight: '' })
 
-      const days = isoDays(7)
-      const [s7, w7] = await Promise.all([
-        supabase.from('health_sleep').select('*').eq('user_id', user.id).in('date', days),
-        supabase.from('health_weight').select('*').eq('user_id', user.id).in('date', days),
-      ])
-      const sleepMap = new Map((s7.data ?? []).map((x) => [x.date, x]))
-      const weightMap = new Map((w7.data ?? []).map((x) => [x.date, x]))
-      setSleep7(
-        days.map((d) => ({
-          date: d.slice(5),
-          hours: Number(sleepMap.get(d)?.hours ?? 0),
-          quality: Number(sleepMap.get(d)?.quality ?? 0),
-        })),
-      )
-      setWeight7(
-        days.map((d) => ({
-          date: d.slice(5),
-          weight: Number(weightMap.get(d)?.weight ?? 0),
-        })),
-      )
+        const days = isoDays(7)
+        const s7 = sleepData.filter(s => days.includes(s.date))
+        const w7 = bodyData.filter(b => days.includes(b.date))
+        
+        const sleepMap = new Map((s7 ?? []).map((x) => [x.date, x]))
+        const weightMap = new Map((w7 ?? []).map((x) => [x.date, x]))
+        setSleep7(
+          days.map((d) => ({
+            date: d.slice(5),
+            hours: Number(sleepMap.get(d)?.hours ?? 0),
+            quality: Number(sleepMap.get(d)?.quality ?? 0),
+          })),
+        )
+        setWeight7(
+          days.map((d) => ({
+            date: d.slice(5),
+            weight: Number(weightMap.get(d)?.weight ?? 0),
+          })),
+        )
+      } catch (err) {
+        toast.push({ tone: 'danger', text: 'Error loading health data' })
+      }
 
       const gwKey = `dex:goalWeight:${user.id}`
       setGoalWeight(localStorage.getItem(gwKey) ?? '')
@@ -87,28 +93,32 @@ export function HealthPage() {
     const name = fName.trim()
     if (!name) return
     const row = {
-      user_id: user.id,
       name,
       calories: Number(cal || 0),
       protein: Number(p || 0),
       carbs: Number(c || 0),
       fat: Number(fat || 0),
+      date: today
     }
-    const { data, error } = await supabase.from('health_food').insert(row).select('*').single()
-    if (error) return toast.push({ tone: 'danger', text: error.message })
-    setFood((x) => [data, ...x])
-    setFName('')
-    setCal('')
-    setP('')
-    setC('')
-    setFat('')
-    toast.push({ tone: 'success', text: 'Food logged.' })
+    try {
+      const data = await fetchApi(`/api/${user.id}/food`, { method: 'POST', body: JSON.stringify(row) })
+      setFood((x) => [data, ...x])
+      setFName('')
+      setCal('')
+      setP('')
+      setC('')
+      setFat('')
+      toast.push({ tone: 'success', text: 'Food logged.' })
+    } catch (error) {
+       toast.push({ tone: 'danger', text: error.message })
+    }
   }
 
   async function deleteFood(id) {
-    const { error } = await supabase.from('health_food').delete().eq('id', id)
-    if (error) return toast.push({ tone: 'danger', text: error.message })
-    setFood((x) => x.filter((y) => y.id !== id))
+    try {
+      await fetchApi(`/api/${user.id}/food/${id}`, { method: 'DELETE' })
+      setFood((x) => x.filter((y) => y.id !== id))
+    } catch (err) {}
   }
 
   const totals = useMemo(() => {
@@ -127,34 +137,46 @@ export function HealthPage() {
   async function setWaterGlasses(next) {
     if (!user?.id) return
     const glasses = Math.max(0, Math.min(20, next))
-    const { data, error } = await supabase
-      .from('health_water')
-      .upsert({ user_id: user.id, date: today, glasses }, { onConflict: 'user_id,date' })
-      .select('*')
-      .single()
-    if (error) return toast.push({ tone: 'danger', text: error.message })
-    setWater(data)
+    try {
+      const data = await fetchApi(`/api/${user.id}/health`, {
+        method: 'POST',
+        body: JSON.stringify({ type: 'water', glasses, amount: glasses, date: today })
+      })
+      setWater(data)
+    } catch (error) {
+      toast.push({ tone: 'danger', text: error.message })
+    }
   }
 
   async function saveSleep() {
     if (!user?.id) return
     const hours = Number(sleep.hours || 0)
     const quality = Number(sleep.quality || 3)
-    const { error } = await supabase
-      .from('health_sleep')
-      .upsert({ user_id: user.id, date: today, hours, quality }, { onConflict: 'user_id,date' })
-    if (error) return toast.push({ tone: 'danger', text: error.message })
-    toast.push({ tone: 'success', text: 'Sleep saved.' })
+    try {
+      await fetchApi(`/api/${user.id}/sleep`, {
+        method: 'POST',
+        body: JSON.stringify({ hours, quality, date: today })
+      })
+      toast.push({ tone: 'success', text: 'Sleep saved.' })
+    } catch (error) {
+      toast.push({ tone: 'danger', text: error.message })
+    }
   }
 
   async function saveWeight() {
     if (!user?.id) return
     const w = Number(weight.weight || 0)
     if (!w) return
-    const { error } = await supabase.from('health_weight').upsert({ user_id: user.id, date: today, weight: w }, { onConflict: 'user_id,date' })
-    if (error) return toast.push({ tone: 'danger', text: error.message })
-    toast.push({ tone: 'success', text: 'Weight saved.' })
-    setWeight7((x) => x.map((d) => (d.date === today.slice(5) ? { ...d, weight: w } : d)))
+    try {
+      await fetchApi(`/api/${user.id}/body`, {
+        method: 'POST',
+        body: JSON.stringify({ weight: w, date: today })
+      })
+      toast.push({ tone: 'success', text: 'Weight saved.' })
+      setWeight7((x) => x.map((d) => (d.date === today.slice(5) ? { ...d, weight: w } : d)))
+    } catch(err) {
+      toast.push({ tone: 'danger', text: err.message })
+    }
   }
 
   function saveGoalWeight(v) {

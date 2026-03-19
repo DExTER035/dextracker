@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
-import { supabase } from '../../lib/supabase.js'
+import { fetchApi } from '../../lib/api.js'
 import { useAuth } from '../../providers/AuthProvider.jsx'
 import { EmptyState } from '../../ui/components/EmptyState.jsx'
 import { useToast } from '../../ui/components/ToastProvider.jsx'
@@ -22,14 +22,16 @@ export function FinancePage() {
   useEffect(() => {
     if (!user?.id) return
     ;(async () => {
-      const { data } = await supabase
-        .from('finance_transactions')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(200)
-      setTx(data ?? [])
-      setBudget(localStorage.getItem(budgetKey) ?? '')
+      try {
+        const [txs, bud] = await Promise.all([
+          fetchApi(`/api/${user.id}/money`),
+          fetchApi(`/api/${user.id}/budget`)
+        ])
+        setTx((txs ?? []).sort((a,b) => new Date(b.date) - new Date(a.date)))
+        setBudget(bud?.monthly ?? '')
+      } catch (err) {
+        toast.push({ tone: 'danger', text: 'Error loading finance data' })
+      }
     })()
   }, [user?.id])
 
@@ -37,22 +39,25 @@ export function FinancePage() {
     if (!user?.id) return
     const a = Number(amount)
     if (!a || a < 0) return
-    const { data, error } = await supabase
-      .from('finance_transactions')
-      .insert({ user_id: user.id, type, amount: a, category, note: note.trim() || null })
-      .select('*')
-      .single()
-    if (error) return toast.push({ tone: 'danger', text: error.message })
-    setTx((x) => [data, ...x])
-    setAmount('')
-    setNote('')
-    toast.push({ tone: 'success', text: 'Transaction added.' })
+    try {
+      const data = await fetchApi(`/api/${user.id}/money`, {
+        method: 'POST',
+        body: JSON.stringify({ type, amount: a, category, note: note.trim() || null })
+      })
+      setTx((x) => [data, ...x])
+      setAmount('')
+      setNote('')
+      toast.push({ tone: 'success', text: 'Transaction added.' })
+    } catch (err) {
+      toast.push({ tone: 'danger', text: err.message })
+    }
   }
 
   async function delTx(id) {
-    const { error } = await supabase.from('finance_transactions').delete().eq('id', id)
-    if (error) return toast.push({ tone: 'danger', text: error.message })
-    setTx((x) => x.filter((y) => y.id !== id))
+    try {
+      await fetchApi(`/api/${user.id}/money/${id}`, { method: 'DELETE' })
+      setTx((x) => x.filter((y) => y.id !== id))
+    } catch (err) {}
   }
 
   const totals = useMemo(() => {
@@ -77,10 +82,13 @@ export function FinancePage() {
 
   const colors = ['#00d4aa', '#f59e0b', '#34d399', '#64748b', '#ef4444', '#1a2535']
 
-  function saveBudget(v) {
-    localStorage.setItem(budgetKey, v)
-    setBudget(v)
-    toast.push({ tone: 'success', text: 'Budget saved.' })
+  async function saveBudget(v) {
+    if (!user?.id) return
+    try {
+      await fetchApi(`/api/${user.id}/budget`, { method: 'POST', body: JSON.stringify({ monthly: v || 0 }) })
+      setBudget(v)
+      toast.push({ tone: 'success', text: 'Budget saved.' })
+    } catch (err) {}
   }
 
   return (
@@ -141,7 +149,7 @@ export function FinancePage() {
                 Save
               </Button>
             </div>
-            <div className="mt-2 text-xs text-muted">Stored locally per month for now.</div>
+            <div className="mt-2 text-xs text-muted">Synced safely to your custom backend!</div>
           </div>
         </Card>
 
@@ -177,7 +185,7 @@ export function FinancePage() {
                   <div className="text-sm font-bold text-text">
                     {t.category}{' '}
                     <span className="mono text-muted">
-                      ₹{Number(t.amount ?? 0).toFixed(0)} • {new Date(t.created_at).toLocaleDateString()}
+                      ₹{Number(t.amount ?? 0).toFixed(0)} • {new Date(t.date || t.createdAt).toLocaleDateString()}
                     </span>
                   </div>
                   {t.note ? <div className="text-xs text-muted">{t.note}</div> : null}

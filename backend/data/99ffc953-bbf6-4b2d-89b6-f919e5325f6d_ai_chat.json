@@ -1,0 +1,16 @@
+[
+  {
+    "id": "0b257e85-9418-4800-a2c4-515facc96ae4",
+    "role": "user",
+    "text": "Help me plan my day",
+    "assistant": "Dex",
+    "timestamp": "2026-03-14T12:40:30.283Z"
+  },
+  {
+    "id": "ed7e8537-06ff-4243-8ba4-bd37a11e978b",
+    "role": "assistant",
+    "assistant": "Dex",
+    "text": "That's interesting! I'm Dex, your personal life assistant. I can help you optimize your daily routine, track goals, and stay motivated. What would you like to work on?",
+    "timestamp": "2026-03-14T12:40:30.283Z"
+  }
+]

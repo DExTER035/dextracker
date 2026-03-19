@@ -1,0 +1,30 @@
+[
+  {
+    "id": "02d88e38-46af-4395-ae5c-614cc12d7f72",
+    "role": "user",
+    "text": "Help me plan my day",
+    "assistant": "Dex",
+    "timestamp": "2026-03-14T13:00:39.309Z"
+  },
+  {
+    "id": "016a2b48-f8c4-4d9d-ba50-5f1bcfe2ff01",
+    "role": "assistant",
+    "assistant": "Dex",
+    "text": "That's interesting! I'm Dex, your personal life assistant. I can help you optimize your daily routine, track goals, and stay motivated. What would you like to work on?",
+    "timestamp": "2026-03-14T13:00:39.309Z"
+  },
+  {
+    "id": "c195b36e-269c-4185-ba8a-7f566af6d370",
+    "role": "user",
+    "text": "help me to schduled tpoday",
+    "assistant": "Dexiva",
+    "timestamp": "2026-03-14T13:01:01.792Z"
+  },
+  {
+    "id": "f9c7aaa5-4e87-450e-871b-fb2594fabef5",
+    "role": "assistant",
+    "assistant": "Dexiva",
+    "text": "That's interesting! I'm Dexiva, your personal life assistant. I can help you optimize your daily routine, track goals, and stay motivated. What would you like to work on?",
+    "timestamp": "2026-03-14T13:01:01.792Z"
+  }
+]

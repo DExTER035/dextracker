@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Trash2 } from 'lucide-react'
-import { supabase } from '../../lib/supabase.js'
+import { fetchApi } from '../../lib/api.js'
 import { todayISO } from '../../lib/date.js'
 import { XP, addXp } from '../../lib/xp.js'
 import { useAuth } from '../../providers/AuthProvider.jsx'
@@ -57,85 +57,115 @@ export function PlannerPage() {
   useEffect(() => {
     if (!user?.id) return
     ;(async () => {
-      const [{ data: t }, { data: h }, { data: m }, { data: j }] = await Promise.all([
-        supabase.from('tasks').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
-        supabase.from('habits').select('*').eq('user_id', user.id).order('created_at', { ascending: true }),
-        supabase.from('mood_logs').select('*').eq('user_id', user.id).gte('created_at', `${today}T00:00:00Z`).lte('created_at', `${today}T23:59:59Z`),
-        supabase.from('journal_entries').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(20),
-      ])
-      setTasks(t ?? [])
-      setHabits(h ?? [])
-      setMoodToday((m ?? [])[0] ?? null)
-      setEntries(j ?? [])
-
+      // Pre-load pin from local storage so we can fetch journals if we have it
       const pinKey = `dex:pin:${user.id}`
       const stored = localStorage.getItem(pinKey)
-      setPin(stored ?? '')
-      setPinOk(stored ? false : true) // if no PIN set, allow and ask to set
+      const currentPin = stored ?? ''
+      setPin(currentPin)
+      setPinOk(stored ? false : true)
+      
+      try {
+        const [t, h, m] = await Promise.all([
+          fetchApi(`/api/${user.id}/tasks`),
+          fetchApi(`/api/${user.id}/habits`),
+          fetchApi(`/api/${user.id}/mood`),
+        ])
+        // Filter mood to today (server might return array)
+        const todaysMood = m.filter(x => x.date?.startsWith(today))
+        
+        setTasks((t ?? []).sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt)))
+        setHabits(h ?? [])
+        setMoodToday(todaysMood[0] ?? null)
+        
+        if (currentPin) {
+           fetchApi(`/api/${user.id}/journal?pin=${currentPin}`)
+             .then(res => setEntries((res ?? []).reverse()))
+             .catch(() => setPinOk(false)) 
+        }
+      } catch (err) {
+        toast.push({ tone: 'danger', text: 'Failed to load planner data' })
+      }
     })()
   }, [user?.id, today])
 
   async function addTask() {
     const text = taskText.trim()
     if (!text || !user?.id) return
-    const { data, error } = await supabase
-      .from('tasks')
-      .insert({ user_id: user.id, text, priority })
-      .select('*')
-      .single()
-    if (error) return toast.push({ tone: 'danger', text: error.message })
-    setTasks((x) => [data, ...x])
-    setTaskText('')
-    toast.push({ tone: 'success', text: 'Task added.' })
+    try {
+      const data = await fetchApi(`/api/${user.id}/tasks`, {
+        method: 'POST',
+        body: JSON.stringify({ text, priority })
+      })
+      setTasks((x) => [data, ...x])
+      setTaskText('')
+      toast.push({ tone: 'success', text: 'Task added.' })
+    } catch (error) {
+       toast.push({ tone: 'danger', text: error.message })
+    }
   }
 
   async function toggleTask(t) {
     if (!user?.id) return
     const nextDone = !t.done
-    const { error } = await supabase.from('tasks').update({ done: nextDone }).eq('id', t.id)
-    if (error) return toast.push({ tone: 'danger', text: error.message })
-    setTasks((x) => x.map((y) => (y.id === t.id ? { ...y, done: nextDone } : y)))
-    if (nextDone) {
-      const r = await addXp(user.id, XP.task)
-      if (r.ok) toast.push({ tone: 'success', text: `+${XP.task} XP` })
+    try {
+      await fetchApi(`/api/${user.id}/tasks/${t.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ done: nextDone })
+      })
+      setTasks((x) => x.map((y) => (y.id === t.id ? { ...y, done: nextDone } : y)))
+      if (nextDone) {
+        const r = await addXp(user.id, XP.task, 'Completed Task')
+        if (r.ok) toast.push({ tone: 'success', text: `+${XP.task} XP` })
+      }
+    } catch (error) {
+       toast.push({ tone: 'danger', text: error.message })
     }
   }
 
   async function deleteTask(id) {
-    const { error } = await supabase.from('tasks').delete().eq('id', id)
-    if (error) return toast.push({ tone: 'danger', text: error.message })
-    setTasks((x) => x.filter((y) => y.id !== id))
+    try {
+      await fetchApi(`/api/${user.id}/tasks/${id}`, { method: 'DELETE' })
+      setTasks((x) => x.filter((y) => y.id !== id))
+    } catch(err) {}
   }
 
   function habitDoneToday(h) {
-    const arr = Array.isArray(h.completed_dates) ? h.completed_dates : []
+    const arr = Array.isArray(h.completedDates) ? h.completedDates : []
     return arr.includes(today)
   }
 
   async function addHabit() {
     const name = habitName.trim()
     if (!name || !user?.id) return
-    const { data, error } = await supabase
-      .from('habits')
-      .insert({ user_id: user.id, name, icon: habitIcon })
-      .select('*')
-      .single()
-    if (error) return toast.push({ tone: 'danger', text: error.message })
-    setHabits((x) => [...x, data])
-    setHabitName('')
-    toast.push({ tone: 'success', text: 'Habit added.' })
+    try {
+      const data = await fetchApi(`/api/${user.id}/habits`, {
+        method: 'POST',
+        body: JSON.stringify({ name, icon: habitIcon })
+      })
+      setHabits((x) => [...x, data])
+      setHabitName('')
+      toast.push({ tone: 'success', text: 'Habit added.' })
+    } catch (error) {
+      toast.push({ tone: 'danger', text: error.message })
+    }
   }
 
   async function completeHabit(h) {
     if (!user?.id) return
     if (habitDoneToday(h)) return
-    const prev = Array.isArray(h.completed_dates) ? h.completed_dates : []
+    const prev = Array.isArray(h.completedDates) ? h.completedDates : []
     const next = [...prev, today]
-    const { error } = await supabase.from('habits').update({ completed_dates: next }).eq('id', h.id)
-    if (error) return toast.push({ tone: 'danger', text: error.message })
-    setHabits((x) => x.map((y) => (y.id === h.id ? { ...y, completed_dates: next } : y)))
-    const r = await addXp(user.id, XP.habit)
-    if (r.ok) toast.push({ tone: 'success', text: `+${XP.habit} XP` })
+    try {
+      await fetchApi(`/api/${user.id}/habits/${h.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ completedDates: next, streak: (h.streak || 0) + 1 })
+      })
+      setHabits((x) => x.map((y) => (y.id === h.id ? { ...y, completedDates: next, streak: (y.streak || 0) + 1 } : y)))
+      const r = await addXp(user.id, XP.habit, 'Completed Habit')
+      if (r.ok) toast.push({ tone: 'success', text: `+${XP.habit} XP` })
+    } catch (error) {
+      toast.push({ tone: 'danger', text: error.message })
+    }
   }
 
   const habitsDone = habits.filter(habitDoneToday).length
@@ -151,19 +181,22 @@ export function PlannerPage() {
       5: { label: 'amazing', emoji: '😁' },
     }
     const info = map[moodValue]
-    const { data, error } = await supabase
-      .from('mood_logs')
-      .insert({ user_id: user.id, value: moodValue, label: info.label, note: moodNote.trim() || null })
-      .select('*')
-      .single()
-    if (error) return toast.push({ tone: 'danger', text: error.message })
-    setMoodToday(data)
-    setMoodNote('')
-    const r = await addXp(user.id, XP.mood)
-    if (r.ok) toast.push({ tone: 'success', text: `+${XP.mood} XP` })
+    
+    try {
+      const data = await fetchApi(`/api/${user.id}/mood`, {
+        method: 'POST',
+        body: JSON.stringify({ score: moodValue, label: info.label, note: moodNote.trim() || null })
+      })
+      setMoodToday(data)
+      setMoodNote('')
+      const r = await addXp(user.id, XP.mood, 'Logged Mood')
+      if (r.ok) toast.push({ tone: 'success', text: `+${XP.mood} XP` })
+    } catch (error) {
+      toast.push({ tone: 'danger', text: error.message })
+    }
   }
 
-  function unlockOrSetPin() {
+  async function unlockOrSetPin() {
     if (!user?.id) return
     const pinKey = `dex:pin:${user.id}`
     if (!pin) {
@@ -172,14 +205,27 @@ export function PlannerPage() {
         toast.push({ tone: 'danger', text: 'PIN must be 4-6 digits.' })
         return
       }
-      localStorage.setItem(pinKey, p)
-      setPin(p)
-      setPinOk(true)
-      toast.push({ tone: 'success', text: 'PIN set.' })
+      try {
+        await fetchApi(`/api/${user.id}/journal/pin`, { method: 'POST', body: JSON.stringify({ pin: p }) })
+        localStorage.setItem(pinKey, p)
+        setPin(p)
+        setPinOk(true)
+        toast.push({ tone: 'success', text: 'PIN set.' })
+      } catch (err) {
+        toast.push({ tone: 'danger', text: err.message })
+      }
       return
     }
-    if (pinInput.trim() === pin) setPinOk(true)
-    else toast.push({ tone: 'danger', text: 'Wrong PIN.' })
+    if (pinInput.trim() === pin) {
+       try {
+         const res = await fetchApi(`/api/${user.id}/journal?pin=${pin}`)
+         setEntries((res ?? []).reverse())
+         setPinOk(true)
+       } catch (err) {
+         toast.push({ tone: 'danger', text: 'Wrong PIN.' })
+         setPinOk(false)
+       }
+    } else toast.push({ tone: 'danger', text: 'Wrong PIN.' })
   }
 
   async function addEntry() {
@@ -187,17 +233,19 @@ export function PlannerPage() {
     const title = jTitle.trim()
     const text = jText.trim()
     if (!title || !text) return
-    const { data, error } = await supabase
-      .from('journal_entries')
-      .insert({ user_id: user.id, title, text })
-      .select('*')
-      .single()
-    if (error) return toast.push({ tone: 'danger', text: error.message })
-    setEntries((x) => [data, ...x])
-    setJTitle('')
-    setJText('')
-    const r = await addXp(user.id, XP.journal)
-    if (r.ok) toast.push({ tone: 'success', text: `+${XP.journal} XP` })
+    try {
+      const data = await fetchApi(`/api/${user.id}/journal`, {
+        method: 'POST',
+        body: JSON.stringify({ pin, title, text })
+      })
+      setEntries((x) => [data, ...x])
+      setJTitle('')
+      setJText('')
+      const r = await addXp(user.id, XP.journal, 'Journal Entry')
+      if (r.ok) toast.push({ tone: 'success', text: `+${XP.journal} XP` })
+    } catch (err) {
+      toast.push({ tone: 'danger', text: err.message })
+    }
   }
 
   return (

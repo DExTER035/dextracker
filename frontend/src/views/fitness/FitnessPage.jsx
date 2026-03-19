@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import { supabase } from '../../lib/supabase.js'
-import { isoDays } from '../../lib/date.js'
+import { fetchApi } from '../../lib/api.js'
+import { isoDays, todayISO } from '../../lib/date.js'
 import { XP, addXp } from '../../lib/xp.js'
 import { useAuth } from '../../providers/AuthProvider.jsx'
 import { EmptyState } from '../../ui/components/EmptyState.jsx'
@@ -32,8 +32,13 @@ export function FitnessPage() {
   useEffect(() => {
     if (!user?.id) return
     ;(async () => {
-      const { data } = await supabase.from('fitness_workouts').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(200)
-      setWorkouts(data ?? [])
+      try {
+        const data = await fetchApi(`/api/${user.id}/fitness`)
+        const sorted = (data ?? []).sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt))
+        setWorkouts(sorted.slice(0, 200))
+      } catch (err) {
+        toast.push({ tone: 'danger', text: 'Failed to load workouts.' })
+      }
     })()
   }, [user?.id])
 
@@ -42,31 +47,34 @@ export function FitnessPage() {
     const dur = Number(duration || 0)
     const cal = Number(calories || 0)
     if (!dur) return
-    const { data, error } = await supabase
-      .from('fitness_workouts')
-      .insert({ user_id: user.id, activity, duration: dur, calories: cal, notes: notes.trim() || null })
-      .select('*')
-      .single()
-    if (error) return toast.push({ tone: 'danger', text: error.message })
-    setWorkouts((x) => [data, ...x])
-    setDuration('')
-    setCalories('')
-    setNotes('')
-    const r = await addXp(user.id, XP.workout)
-    if (r.ok) toast.push({ tone: 'success', text: `+${XP.workout} XP` })
+    try {
+      const data = await fetchApi(`/api/${user.id}/fitness`, {
+        method: 'POST',
+        body: JSON.stringify({ activity, duration: dur, calories: cal, notes: notes.trim() || null, date: todayISO() })
+      })
+      setWorkouts((x) => [data, ...x])
+      setDuration('')
+      setCalories('')
+      setNotes('')
+      const r = await addXp(user.id, XP.workout, 'Logged Workout')
+      if (r.ok) toast.push({ tone: 'success', text: `+${XP.workout} XP` })
+    } catch (error) {
+      toast.push({ tone: 'danger', text: error.message })
+    }
   }
 
   async function delWorkout(id) {
-    const { error } = await supabase.from('fitness_workouts').delete().eq('id', id)
-    if (error) return toast.push({ tone: 'danger', text: error.message })
-    setWorkouts((x) => x.filter((y) => y.id !== id))
+    try {
+      await fetchApi(`/api/${user.id}/fitness/${id}`, { method: 'DELETE' })
+      setWorkouts((x) => x.filter((y) => y.id !== id))
+    } catch(err) {}
   }
 
   const weekly = useMemo(() => {
     const days = isoDays(7)
     const map = new Map(days.map((d) => [d, { minutes: 0, calories: 0, sessions: 0 }]))
     for (const w of workouts) {
-      const d = new Date(w.created_at).toISOString().slice(0, 10)
+      const d = w.date || (w.createdAt ? new Date(w.createdAt).toISOString().slice(0, 10) : '')
       if (!map.has(d)) continue
       const cur = map.get(d)
       cur.minutes += Number(w.duration ?? 0)
@@ -146,7 +154,7 @@ export function FitnessPage() {
                   <div className="text-sm font-bold text-text capitalize">
                     {w.activity}{' '}
                     <span className="mono text-muted">
-                      {w.duration}m • {w.calories} cal • {new Date(w.created_at).toLocaleDateString()}
+                      {w.duration}m • {w.calories} cal • {new Date(w.date || w.createdAt).toLocaleDateString()}
                     </span>
                   </div>
                   {w.notes ? <div className="text-xs text-muted">{w.notes}</div> : null}

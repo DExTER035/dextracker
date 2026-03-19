@@ -1,7 +1,7 @@
 import { Award, Bot, CheckCircle2, Flame, Quote, Sparkles, Trophy, BadgeDollarSign, HeartPulse, GraduationCap, ListTodo, Target, Dumbbell } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { supabase } from '../../lib/supabase.js'
+import { fetchApi } from '../../lib/api.js'
 import { todayISO } from '../../lib/date.js'
 import { XP, addXp, levelFromXp } from '../../lib/xp.js'
 import { useAuth } from '../../providers/AuthProvider.jsx'
@@ -19,16 +19,22 @@ export function DashboardPage() {
   const [busy, setBusy] = useState(false)
   const [stats, setStats] = useState(null)
 
-  const xp = profile?.xp ?? 0
+  const xp = user?.xp ?? 0
   const lev = useMemo(() => levelFromXp(xp), [xp])
 
   useEffect(() => {
     const key = `dex:wins:${user?.id ?? 'anon'}:${todayISO()}`
     const raw = localStorage.getItem(key)
     setWins(raw ? JSON.parse(raw) : [])
-    setQuote({
-      text: 'Discipline isn’t a personality trait. It’s a decision you renew daily.',
-      by: 'DEXTRACKER',
+    
+    // Fetch daily challenge & quote from backend
+    fetchApi('/api/daily-challenge').then(res => {
+      if (res.quote) setQuote(res.quote)
+    }).catch(() => {
+      setQuote({
+        text: 'Discipline isn’t a personality trait. It’s a decision you renew daily.',
+        by: 'DEXTRACKER',
+      })
     })
   }, [user?.id])
 
@@ -40,26 +46,22 @@ export function DashboardPage() {
       
       try {
         const [
-          { data: tasks }, { data: habits },
-          { data: txs },
-          { data: sleep }, { data: water }, { data: mood },
-          { data: study },
-          { data: goals },
-          { data: fit }
+          tasks, habits, txs, sleep, health, mood, study, goals, fit
         ] = await Promise.all([
-          supabase.from('tasks').select('*').eq('user_id', user.id).eq('date', today),
-          supabase.from('habits').select('*').eq('user_id', user.id),
-          supabase.from('finance_transactions').select('*').eq('user_id', user.id),
-          supabase.from('health_sleep').select('*').eq('user_id', user.id),
-          supabase.from('health_water').select('*').eq('user_id', user.id).eq('date', today),
-          supabase.from('mood_logs').select('*').eq('user_id', user.id).eq('date', today),
-          supabase.from('study_sessions').select('*').eq('user_id', user.id).eq('date', today),
-          supabase.from('goals').select('*').eq('user_id', user.id),
-          supabase.from('fitness_workouts').select('*').eq('user_id', user.id)
+          fetchApi(`/api/${user.id}/tasks`),
+          fetchApi(`/api/${user.id}/habits`),
+          fetchApi(`/api/${user.id}/money`),
+          fetchApi(`/api/${user.id}/sleep`),
+          fetchApi(`/api/${user.id}/health`),
+          fetchApi(`/api/${user.id}/mood`),
+          fetchApi(`/api/${user.id}/study-sessions`),
+          fetchApi(`/api/${user.id}/goals`),
+          fetchApi(`/api/${user.id}/sports`)
         ])
         
-        const tasksDone = tasks?.filter(t => t.completed)?.length || 0
-        const habitsDone = habits?.filter(h => h.completed_dates?.includes(today))?.length || 0
+        const todaysTasks = tasks.filter(t => t.date === today)
+        const tasksDone = todaysTasks.filter(t => t.done)?.length || 0
+        const habitsDone = habits?.filter(h => h.completedDates?.includes(today))?.length || 0
         
         const bal = txs?.reduce((a, t) => a + (t.type === 'income' ? t.amount : -t.amount), 0) || 0
         const mTx = txs?.filter(t => t.date?.startsWith(thisMonth)) || []
@@ -67,15 +69,20 @@ export function DashboardPage() {
         const exp = mTx.filter(t => t.type === 'expense').reduce((a, t) => a + t.amount, 0) || 0
         
         const avgSlp = sleep?.length ? (sleep.reduce((a, s) => a + s.hours, 0) / sleep.length).toFixed(1) : 0
-        const wtr = water?.[0]?.amount || 0
-        const md = mood?.[0] ? ['Awful', 'Bad', 'Okay', 'Good', 'Great'][mood[0].score - 1] : '—'
+        const todayHealth = health?.filter(h => h.date === today) || []
+        const wtr = todayHealth.filter(h => h.type === 'water').reduce((a, w) => a + w.amount, 0) || 0
         
-        const stMins = study?.reduce((a, s) => a + s.duration, 0) || 0
+        const todayMood = mood?.filter(m => m.date?.startsWith(today))?.[0]
+        const md = todayMood ? ['Awful', 'Bad', 'Okay', 'Good', 'Great'][todayMood.score - 1] : '—'
+        
+        const todayStudy = study?.filter(s => s.date === today) || []
+        const stMins = todayStudy.reduce((a, s) => a + s.duration, 0) || 0
         const pomo = Math.floor(stMins / 25)
-        const sub = study?.[0]?.subject || '—'
+        const sub = todayStudy[0]?.subject || '—'
         
-        const actG = goals?.filter(g => g.progress < g.target)?.length || 0
+        const actG = goals?.filter(g => g.progress < (g.target || 100))?.length || 0
         
+        const todayFit = fit?.filter(f => f.date === today) || []
         const wrk = fit?.length || 0
         const cal = fit?.reduce((a, f) => a + (f.calories || 0), 0) || 0
         
@@ -115,12 +122,15 @@ export function DashboardPage() {
       return
     }
     setBusy(true)
-    const res = await addXp(user.id, XP.dailyChallenge)
+    const res = await addXp(user.id, XP.dailyChallenge, 'Completed Daily Challenge')
     setBusy(false)
     if (res.ok) {
       localStorage.setItem(key, '1')
       toast.push({ tone: 'success', text: `+${XP.dailyChallenge} XP` })
-      await supabase.from('profiles').update({ last_active: todayISO() }).eq('id', user.id)
+      await fetchApi(`/api/auth/user/${user.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ lastActive: todayISO() })
+      })
     } else toast.push({ tone: 'danger', text: res.error ?? 'XP update failed' })
   }
 

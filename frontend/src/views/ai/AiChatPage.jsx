@@ -6,7 +6,7 @@ import { Badge, Button, Card, Input, SectionLabel } from '../../ui/components/ui
 import { PageShell } from '../_shared/PageShell.jsx'
 
 export function AiChatPage() {
-  const { settings, user } = useAuth()
+  const { user } = useAuth()
   const toast = useToast()
   const [messages, setMessages] = useState([])
   const [text, setText] = useState('')
@@ -18,7 +18,7 @@ export function AiChatPage() {
   const recRef = useRef(null)
   const speakRef = useRef(null)
 
-  const key = settings?.gemini_key ?? ''
+  const key = user?.settings?.gemini_key ?? ''
   const storeKey = useMemo(() => `dex:chat:${user?.id ?? 'anon'}:${new Date().toISOString().slice(0, 10)}`, [user?.id])
 
   const system = `You are a brutally honest thinking partner. Never open with praise. Read between the lines. Call out excuses. Ask uncomfortable questions. Present 2-4 choices as [CHOICE: option1 | option2] format. Keep responses short and punchy.`

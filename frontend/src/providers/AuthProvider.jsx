@@ -1,108 +1,58 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react'
-import { isSupabaseConfigured, supabase } from '../lib/supabase.js'
-import { todayISO } from '../lib/date.js'
+import { fetchApi } from '../lib/api.js'
 
 const AuthContext = createContext(null)
 
-async function ensureUserRows(user) {
-  if (!user?.id) return
-  if (!isSupabaseConfigured || !supabase) return
-  const email = user.email ?? null
-  const name =
-    user.user_metadata?.full_name ??
-    user.user_metadata?.name ??
-    (email ? email.split('@')[0] : 'Demo')
-  const avatar = user.user_metadata?.avatar_url ?? user.user_metadata?.picture ?? null
-
-  await supabase
-    .from('profiles')
-    .upsert(
-      {
-        id: user.id,
-        email,
-        name,
-        avatar,
-        last_active: todayISO(),
-      },
-      { onConflict: 'id' },
-    )
-
-  await supabase
-    .from('user_settings')
-    .upsert(
-      {
-        user_id: user.id,
-      },
-      { onConflict: 'user_id' },
-    )
-}
-
 export function AuthProvider({ children }) {
-  const [session, setSession] = useState(null)
+  const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [profile, setProfile] = useState(null)
-  const [settings, setSettings] = useState(null)
 
   useEffect(() => {
-    if (!isSupabaseConfigured || !supabase) {
-      setSession(null)
-      setLoading(false)
-      return
-    }
-    let mounted = true
-    supabase.auth
-      .getSession()
-      .then(({ data }) => {
-        if (!mounted) return
-        setSession(data.session ?? null)
+    // Check local storage for an existing user session
+    const storedUser = localStorage.getItem('dextracker_user')
+    if (storedUser) {
+      try {
+        const parsed = JSON.parse(storedUser)
+        // Optionally fetch fresh user data from backend
+        fetchApi(`/api/auth/user/${parsed.id}`)
+          .then(({ user: freshUser }) => {
+            setUser(freshUser)
+            localStorage.setItem('dextracker_user', JSON.stringify(freshUser))
+          })
+          .catch(() => {
+            // If the user doesn't exist on the backend anymore, clear session
+            localStorage.removeItem('dextracker_user')
+            setUser(null)
+          })
+          .finally(() => setLoading(false))
+      } catch {
+        localStorage.removeItem('dextracker_user')
+        setUser(null)
         setLoading(false)
-      })
-      .catch(() => {
-        if (!mounted) return
-        setSession(null)
-        setLoading(false)
-      })
-
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, nextSession) => {
-      setSession(nextSession ?? null)
+      }
+    } else {
       setLoading(false)
-    })
-
-    return () => {
-      mounted = false
-      sub?.subscription?.unsubscribe?.()
     }
   }, [])
 
-  useEffect(() => {
-    const user = session?.user ?? null
-    if (!user?.id) {
-      setProfile(null)
-      setSettings(null)
-      return
-    }
+  const login = async (userData) => {
+    const { user: newUser } = await fetchApi('/api/auth/google', {
+      method: 'POST',
+      body: JSON.stringify(userData),
+    })
+    setUser(newUser)
+    localStorage.setItem('dextracker_user', JSON.stringify(newUser))
+  }
 
-    let cancelled = false
-    ;(async () => {
-      if (!isSupabaseConfigured || !supabase) return
-      await ensureUserRows(user)
-      const [{ data: p }, { data: s }] = await Promise.all([
-        supabase.from('profiles').select('*').eq('id', user.id).single(),
-        supabase.from('user_settings').select('*').eq('user_id', user.id).single(),
-      ])
-      if (cancelled) return
-      setProfile(p ?? null)
-      setSettings(s ?? null)
-    })()
+  const logout = () => {
+    setUser(null)
+    localStorage.removeItem('dextracker_user')
+  }
 
-    return () => {
-      cancelled = true
-    }
-  }, [session?.user?.id])
-
+  // For compatibility with old code, expose session
   const value = useMemo(
-    () => ({ session, user: session?.user ?? null, profile, settings, loading }),
-    [session, profile, settings, loading],
+    () => ({ session: user ? { user } : null, user, loading, login, logout }),
+    [user, loading],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

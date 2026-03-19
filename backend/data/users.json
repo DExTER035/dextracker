@@ -1,0 +1,38 @@
+[
+  {
+    "id": "e433c0c1-2133-47e3-9123-3f80dca28c77",
+    "email": "demo@dextrack.app",
+    "name": "Demo User",
+    "avatar": null,
+    "googleId": "demo_001",
+    "tag": "WVP5S",
+    "xp": 0,
+    "level": 1,
+    "badges": [],
+    "createdAt": "2026-03-14T12:35:16.993Z"
+  },
+  {
+    "id": "99ffc953-bbf6-4b2d-89b6-f919e5325f6d",
+    "email": "dex@gmail.com",
+    "name": "dex",
+    "avatar": "https://ui-avatars.com/api/?name=dex&background=1de9ff&color=0b0f1a&bold=true",
+    "googleId": "g_1773491959105",
+    "tag": "DXMAW",
+    "xp": 0,
+    "level": 1,
+    "badges": [],
+    "createdAt": "2026-03-14T12:39:19.112Z"
+  },
+  {
+    "id": "c0351f36-6af7-40aa-b9bd-09761f01359b",
+    "email": "demo@dextracker.app",
+    "name": "Demo User",
+    "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=DemoUser",
+    "googleId": "demo-system-id",
+    "tag": "QQ50D",
+    "xp": 0,
+    "level": 1,
+    "badges": [],
+    "createdAt": "2026-03-19T12:23:01.977Z"
+  }
+]
