@@ -1,7 +1,11 @@
 export const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001'
 
 export async function fetchApi(endpoint, options = {}) {
-  const url = `${API_BASE}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`
+  let base = API_BASE.replace(/\/$/, '')
+  if (base.endsWith('/api') && endpoint.startsWith('/api')) {
+    base = base.slice(0, -4)
+  }
+  const url = `${base}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`
   const headers = {
     'Content-Type': 'application/json',
     ...options.headers,
