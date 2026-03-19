@@ -1,4 +1,4 @@
-import { Award, Bot, CheckCircle2, Flame, Quote, Sparkles, Trophy } from 'lucide-react'
+import { Award, Bot, CheckCircle2, Flame, Quote, Sparkles, Trophy, BadgeDollarSign, HeartPulse, GraduationCap, ListTodo, Target, Dumbbell } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase.js'
@@ -17,6 +17,7 @@ export function DashboardPage() {
   const [winText, setWinText] = useState('')
   const [quote, setQuote] = useState(null)
   const [busy, setBusy] = useState(false)
+  const [stats, setStats] = useState(null)
 
   const xp = profile?.xp ?? 0
   const lev = useMemo(() => levelFromXp(xp), [xp])
@@ -29,6 +30,66 @@ export function DashboardPage() {
       text: 'Discipline isn’t a personality trait. It’s a decision you renew daily.',
       by: 'DEXTRACKER',
     })
+  }, [user?.id])
+
+  useEffect(() => {
+    async function loadStats() {
+      if (!user?.id) return
+      const today = todayISO()
+      const thisMonth = today.slice(0, 7)
+      
+      try {
+        const [
+          { data: tasks }, { data: habits },
+          { data: txs },
+          { data: sleep }, { data: water }, { data: mood },
+          { data: study },
+          { data: goals },
+          { data: fit }
+        ] = await Promise.all([
+          supabase.from('tasks').select('*').eq('user_id', user.id).eq('date', today),
+          supabase.from('habits').select('*').eq('user_id', user.id),
+          supabase.from('finance_transactions').select('*').eq('user_id', user.id),
+          supabase.from('health_sleep').select('*').eq('user_id', user.id),
+          supabase.from('health_water').select('*').eq('user_id', user.id).eq('date', today),
+          supabase.from('mood_logs').select('*').eq('user_id', user.id).eq('date', today),
+          supabase.from('study_sessions').select('*').eq('user_id', user.id).eq('date', today),
+          supabase.from('goals').select('*').eq('user_id', user.id),
+          supabase.from('fitness_workouts').select('*').eq('user_id', user.id)
+        ])
+        
+        const tasksDone = tasks?.filter(t => t.completed)?.length || 0
+        const habitsDone = habits?.filter(h => h.completed_dates?.includes(today))?.length || 0
+        
+        const bal = txs?.reduce((a, t) => a + (t.type === 'income' ? t.amount : -t.amount), 0) || 0
+        const mTx = txs?.filter(t => t.date?.startsWith(thisMonth)) || []
+        const inc = mTx.filter(t => t.type === 'income').reduce((a, t) => a + t.amount, 0) || 0
+        const exp = mTx.filter(t => t.type === 'expense').reduce((a, t) => a + t.amount, 0) || 0
+        
+        const avgSlp = sleep?.length ? (sleep.reduce((a, s) => a + s.hours, 0) / sleep.length).toFixed(1) : 0
+        const wtr = water?.[0]?.amount || 0
+        const md = mood?.[0] ? ['Awful', 'Bad', 'Okay', 'Good', 'Great'][mood[0].score - 1] : '—'
+        
+        const stMins = study?.reduce((a, s) => a + s.duration, 0) || 0
+        const pomo = Math.floor(stMins / 25)
+        const sub = study?.[0]?.subject || '—'
+        
+        const actG = goals?.filter(g => g.progress < g.target)?.length || 0
+        
+        const wrk = fit?.length || 0
+        const cal = fit?.reduce((a, f) => a + (f.calories || 0), 0) || 0
+        
+        setStats({
+           planner: { done: tasksDone, habits: habitsDone },
+           finance: { bal, inc, exp },
+           health: { sleep: avgSlp, water: wtr, mood: md },
+           study: { hrs: (stMins / 60).toFixed(1), pomo, subj: sub },
+           goals: { active: actG },
+           fitness: { wrk, cal }
+        })
+      } catch(e) { console.error('Stats load failed', e) }
+    }
+    loadStats()
   }, [user?.id])
 
   function saveWins(next) {
@@ -64,6 +125,40 @@ export function DashboardPage() {
   }
 
   const challengeDone = user?.id ? localStorage.getItem(`dex:challenge:${user.id}:${todayISO()}`) === '1' : false
+
+  // UI CONFIG FOR DATA CARDS
+  const c = {
+    Finance: { path: '/finance', color: '#00d4aa', icon: BadgeDollarSign, 
+      val: stats ? `$${stats.finance.bal}` : '—', pill: 'BALANCE',
+      l1: 'IN', v1: stats ? `$${stats.finance.inc}` : '—',
+      l2: 'OUT', v2: stats ? `$${stats.finance.exp}` : '—'
+    },
+    Health: { path: '/health', color: '#fb7185', icon: HeartPulse, 
+      val: stats ? `${stats.health.sleep}h` : '—', pill: 'AVG SLEEP',
+      l1: 'WATER', v1: stats ? stats.health.water : '—',
+      l2: 'MOOD', v2: stats ? stats.health.mood : '—'
+    },
+    Study: { path: '/study', color: '#38bdf8', icon: GraduationCap, 
+      val: stats ? `${stats.study.hrs}h` : '—', pill: 'HOURS TODAY',
+      l1: 'POMOS', v1: stats ? stats.study.pomo : '—',
+      l2: 'TOPIC', v2: stats ? stats.study.subj : '—'
+    },
+    Planner: { path: '/planner', color: '#818cf8', icon: ListTodo, 
+      val: stats ? stats.planner.done : '—', pill: 'TASKS DONE',
+      l1: 'HABITS', v1: stats ? stats.planner.habits : '—',
+      l2: 'PENDING', v2: '—'
+    },
+    Goals: { path: '/goals', color: '#fbbf24', icon: Target, 
+      val: stats ? stats.goals.active : '—', pill: 'ACTIVE GOALS',
+      l1: 'STREAK', v1: profile ? `${profile.streak || 0}d` : '—',
+      l2: 'MILESTONES', v2: '—'
+    },
+    Fitness: { path: '/fitness', color: '#fb923c', icon: Dumbbell, 
+      val: stats ? stats.fitness.wrk : '—', pill: 'WORKOUTS',
+      l1: 'CALORIES', v1: stats ? stats.fitness.cal : '—',
+      l2: 'ROUTINE', v2: '—'
+    }
+  }
 
   return (
     <div className="pb-24">
@@ -168,28 +263,41 @@ export function DashboardPage() {
         </Card>
       </div>
 
-      <Card className="mt-6">
-        <SectionLabel>Modules at a glance</SectionLabel>
-        <div className="mt-5 grid grid-cols-1 gap-5 md:grid-cols-3">
-          {[
-            { k: 'Planner', v: 'Tasks + habits pending', path: '/planner' },
-            { k: 'Health', v: 'Food / water / sleep', path: '/health' },
-            { k: 'Finance', v: 'Income vs expenses', path: '/finance' },
-            { k: 'Study', v: 'Minutes studied today', path: '/study' },
-            { k: 'Goals', v: 'Milestones to hit', path: '/goals' },
-            { k: 'Fitness', v: 'Workout logged?', path: '/fitness' },
-          ].map((x) => (
+      <div className="mt-6">
+        <SectionLabel className="px-2 mb-4">Today at a Glance</SectionLabel>
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 md:grid-cols-3">
+          {Object.entries(c).map(([name, d]) => (
             <div
-              key={x.k}
-              onClick={() => navigate(x.path)}
-              className="cursor-pointer rounded-2xl border border-primary/20 bg-surface/40 p-5 transition-all duration-300 hover:-translate-y-1 hover:bg-primary/10 hover:border-primary/50 hover:shadow-[0_0_20px_rgba(0,229,255,0.2)]"
+              key={name}
+              onClick={() => navigate(d.path)}
+              className="cursor-pointer rounded-xl bg-[#0d1420] p-5 shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl"
+              style={{ borderTop: `3px solid ${d.color}` }}
             >
-              <div className="text-xs font-black tracking-[0.3em] text-primary drop-shadow-[0_0_5px_rgba(0,229,255,0.4)] uppercase">{x.k}</div>
-              <div className="mt-2 text-sm font-semibold text-white/90">{x.v}</div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-[10px] font-black tracking-[0.2em] uppercase" style={{ color: d.color }}>
+                  <d.icon size={16} /> {name}
+                </div>
+                <div className="rounded-full px-2.5 py-1 text-[9px] font-bold tracking-widest uppercase" style={{ backgroundColor: `${d.color}20`, color: d.color }}>
+                  {d.pill}
+                </div>
+              </div>
+              
+              <div className="mt-4 text-[32px] font-black leading-none text-white drop-shadow-md">
+                {d.val}
+              </div>
+              
+              <div className="mt-5 flex items-center justify-between text-[11px] font-bold text-muted uppercase tracking-wider">
+                <div className="flex items-center gap-1.5">
+                  {d.l1}: <span style={{ color: d.color }} className="truncate max-w-[80px] text-right inline-block">{d.v1}</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  {d.l2}: <span style={{ color: d.color }} className="truncate max-w-[80px] text-right inline-block">{d.v2}</span>
+                </div>
+              </div>
             </div>
           ))}
         </div>
-      </Card>
+      </div>
 
       <div className="mt-6 grid gap-6 md:grid-cols-2">
         <Card>
