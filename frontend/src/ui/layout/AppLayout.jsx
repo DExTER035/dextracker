@@ -35,13 +35,15 @@ function NavItem({ to, icon: Icon, label }) {
       end={to === '/'}
       className={({ isActive }) =>
         cn(
-          'flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-semibold transition duration-200',
-          isActive ? 'bg-primary/15 text-primary ring-1 ring-primary/30' : 'text-text/90 hover:bg-white/5',
+          'flex items-center gap-3 rounded-full px-4 py-3 text-sm font-bold transition-all duration-300',
+          isActive
+            ? 'bg-primary/20 text-primary ring-1 ring-primary/50 shadow-[0_0_15px_rgba(0,229,255,0.4)] translate-x-1'
+            : 'text-text/80 hover:bg-white/5 hover:text-white',
         )
       }
     >
-      <Icon size={18} />
-      <span className="truncate">{label}</span>
+      <Icon size={20} className={({ isActive }) => (isActive ? 'drop-shadow-[0_0_8px_rgba(0,229,255,0.8)]' : '')} />
+      <span className="tracking-wide truncate">{label}</span>
     </NavLink>
   )
 }
@@ -59,12 +61,12 @@ export function AppLayout() {
       <aside className="hidden md:fixed md:inset-y-0 md:left-0 md:flex md:w-[220px] md:flex-col md:border-r md:border-border md:bg-bg/40 md:backdrop-blur">
         <div className="p-6">
           <div className="flex items-center gap-3">
-            <div className="grid h-10 w-10 place-items-center rounded-2xl bg-primary/15 ring-1 ring-primary/30">
-              <Activity className="text-primary" size={18} />
+            <div className="grid h-12 w-12 place-items-center rounded-full bg-primary/20 ring-1 ring-primary/50 shadow-[0_0_20px_rgba(0,229,255,0.5)]">
+              <Activity className="text-primary drop-shadow-[0_0_8px_rgba(0,229,255,0.9)]" size={24} />
             </div>
             <div className="leading-tight">
-              <div className="text-base font-bold text-text">DexTracker</div>
-              <div className="text-xs text-muted">life OS</div>
+              <div className="text-xl font-black text-white tracking-widest drop-shadow-[0_0_10px_rgba(255,255,255,0.5)]">DEXTRACK</div>
+              <div className="text-xs font-semibold text-primary tracking-[0.3em] uppercase drop-shadow-[0_0_5px_rgba(0,229,255,0.5)]">life OS</div>
             </div>
           </div>
           <div className="mt-4">
@@ -107,12 +109,16 @@ export function AppLayout() {
                 end={n.to === '/'}
                 className={({ isActive }) =>
                   cn(
-                    'flex flex-col items-center justify-center gap-1 rounded-xl px-2 py-2 text-[11px] font-semibold transition duration-200',
-                    isActive ? 'bg-primary/15 text-primary ring-1 ring-primary/30' : 'text-muted hover:bg-white/5',
+                    'flex flex-col items-center justify-center gap-1.5 rounded-2xl px-2 py-2.5 text-[10px] font-bold transition-all duration-300 uppercase tracking-widest',
+                    isActive 
+                      ? 'bg-primary/20 text-primary ring-1 ring-primary/50 shadow-[0_0_15px_rgba(0,229,255,0.4)] -translate-y-1' 
+                      : 'text-muted hover:bg-white/5 hover:text-white',
                   )
                 }
               >
-                <n.icon size={18} />
+                <div className={({isActive}) => (isActive ? 'drop-shadow-[0_0_8px_rgba(0,229,255,0.9)]' : '')}>
+                  <n.icon size={22} />
+                </div>
                 <span className="truncate">{n.label}</span>
               </NavLink>
             ))}

@@ -4,7 +4,7 @@ export function Card({ className, children }) {
   return (
     <div
       className={cn(
-        'rounded-2xl border border-border bg-surface/95 p-6 shadow-[0_10px_35px_rgba(0,0,0,0.35)] transition duration-200 hover:shadow-glow',
+        'rounded-[2rem] border border-primary/20 bg-surface/60 backdrop-blur-2xl p-6 shadow-[0_15px_40px_rgba(0,0,0,0.6)] transition-all duration-300 hover:border-primary/50 hover:shadow-glow',
         className,
       )}
     >
@@ -23,11 +23,11 @@ export function SectionLabel({ children, className }) {
 
 export function Button({ className, variant = 'primary', ...props }) {
   const base =
-    'inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 disabled:opacity-50 disabled:pointer-events-none'
+    'inline-flex items-center justify-center gap-2 rounded-full px-6 py-3 text-sm font-bold transition-all duration-300 focus:outline-none disabled:opacity-50 disabled:pointer-events-none active:scale-95'
   const variants = {
-    primary: 'bg-primary text-bg hover:brightness-110',
-    ghost: 'bg-transparent text-text hover:bg-white/5 border border-border',
-    danger: 'bg-danger text-white hover:brightness-110',
+    primary: 'bg-gradient-to-r from-primary to-blue-500 text-bg shadow-buttonGlow hover:shadow-[0_0_25px_rgba(0,229,255,0.7),inset_0_0_15px_rgba(0,229,255,0.5)] hover:brightness-125',
+    ghost: 'bg-transparent text-text hover:bg-white/5 border border-primary/20 hover:border-primary hover:shadow-glow',
+    danger: 'bg-danger text-white hover:brightness-110 shadow-[0_0_15px_rgba(239,68,68,0.4)]',
   }
   return <button className={cn(base, variants[variant] ?? variants.primary, className)} {...props} />
 }
@@ -46,20 +46,21 @@ export function Input({ className, ...props }) {
 
 export function Badge({ children, tone = 'online', className }) {
   const tones = {
-    online: 'bg-primary/15 text-primary border-primary/30',
-    active: 'bg-success/15 text-success border-success/30',
-    gold: 'bg-gold/15 text-gold border-gold/30',
-    danger: 'bg-danger/15 text-danger border-danger/30',
+    online: 'bg-primary/20 text-primary border-primary/50 shadow-[0_0_10px_rgba(0,229,255,0.4)]',
+    active: 'bg-success/20 text-success border-success/50 shadow-[0_0_10px_rgba(52,211,153,0.4)]',
+    gold: 'bg-gold/20 text-gold border-gold/50 shadow-[0_0_10px_rgba(245,158,11,0.4)]',
+    danger: 'bg-danger/20 text-danger border-danger/50 shadow-[0_0_10px_rgba(239,68,68,0.4)]',
     muted: 'bg-white/5 text-muted border-border',
   }
   return (
     <span
       className={cn(
-        'inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold tracking-[0.18em] uppercase',
+        'inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-bold tracking-[0.2em] uppercase',
         tones[tone] ?? tones.muted,
         className,
       )}
     >
+      {tone !== 'muted' && <span className="h-1.5 w-1.5 rounded-full bg-current shadow-[0_0_5px_currentColor] animate-pulse" />}
       {children}
     </span>
   )

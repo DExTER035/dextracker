@@ -19,7 +19,8 @@ export default {
         mono: ['var(--font-mono)'],
       },
       boxShadow: {
-        glow: '0 0 0 1px rgba(0, 212, 170, 0.35), 0 0 22px rgba(0, 212, 170, 0.12)',
+        glow: '0 0 0 1px rgba(0, 229, 255, 0.3), 0 0 30px rgba(0, 229, 255, 0.15)',
+        buttonGlow: '0 0 15px rgba(0, 229, 255, 0.5), inset 0 0 10px rgba(0, 229, 255, 0.3)',
       },
       transitionDuration: {
         200: '200ms',
