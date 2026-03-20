@@ -6,6 +6,8 @@ import { EmptyState } from '../../ui/components/EmptyState.jsx'
 import { useToast } from '../../ui/components/ToastProvider.jsx'
 import { Badge, Button, Card, Input, SectionLabel } from '../../ui/components/ui.jsx'
 import { PageShell } from '../_shared/PageShell.jsx'
+// eslint-disable-next-line no-unused-vars
+import { motion, AnimatePresence } from 'framer-motion'
 
 export function FinancePage() {
   const { user } = useAuth()
@@ -16,8 +18,7 @@ export function FinancePage() {
   const [category, setCategory] = useState('Food')
   const [note, setNote] = useState('')
   const [budget, setBudget] = useState('')
-
-  const budgetKey = user?.id ? `dex:budget:${user.id}:${new Date().toISOString().slice(0, 7)}` : 'dex:budget:na'
+  const [newTxId, setNewTxId] = useState(null)
 
   useEffect(() => {
     if (!user?.id) return
@@ -29,11 +30,11 @@ export function FinancePage() {
         ])
         setTx((txs ?? []).sort((a,b) => new Date(b.date) - new Date(a.date)))
         setBudget(bud?.monthly ?? '')
-      } catch (err) {
+      } catch {
         toast.push({ tone: 'danger', text: 'Error loading finance data' })
       }
     })()
-  }, [user?.id])
+  }, [user?.id, toast])
 
   async function addTx() {
     if (!user?.id) return
@@ -45,6 +46,8 @@ export function FinancePage() {
         body: JSON.stringify({ type, amount: a, category, note: note.trim() || null })
       })
       setTx((x) => [data, ...x])
+      setNewTxId(data.id)
+      setTimeout(() => setNewTxId(null), 1000)
       setAmount('')
       setNote('')
       toast.push({ tone: 'success', text: 'Transaction added.' })
@@ -57,7 +60,7 @@ export function FinancePage() {
     try {
       await fetchApi(`/api/${user.id}/money/${id}`, { method: 'DELETE' })
       setTx((x) => x.filter((y) => y.id !== id))
-    } catch (err) {}
+    } catch { /* ignore */ }
   }
 
   const totals = useMemo(() => {
@@ -88,12 +91,16 @@ export function FinancePage() {
       await fetchApi(`/api/${user.id}/budget`, { method: 'POST', body: JSON.stringify({ monthly: v || 0 }) })
       setBudget(v)
       toast.push({ tone: 'success', text: 'Budget saved.' })
-    } catch (err) {}
+    } catch { /* ignore */ }
   }
 
   return (
     <PageShell label="Finance" title="Finance">
-      <div className="grid gap-6 md:grid-cols-3">
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="grid gap-6 md:grid-cols-3"
+      >
         <Card>
           <SectionLabel>Total income</SectionLabel>
           <div className="mt-2 text-2xl font-bold text-text mono">₹{totals.income.toFixed(0)}</div>
@@ -106,7 +113,7 @@ export function FinancePage() {
           <SectionLabel>Balance</SectionLabel>
           <div className="mt-2 text-2xl font-bold text-text mono">₹{totals.balance.toFixed(0)}</div>
         </Card>
-      </div>
+      </motion.div>
 
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
@@ -158,12 +165,12 @@ export function FinancePage() {
           <div className="mt-4 h-64">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
-                <Pie data={donut} dataKey="value" nameKey="name" innerRadius={55} outerRadius={90} paddingAngle={2}>
+                <Pie data={donut} dataKey="value" nameKey="name" innerRadius={55} outerRadius={90} paddingAngle={2} animationDuration={1000}>
                   {donut.map((_, i) => (
                     <Cell key={i} fill={colors[i % colors.length]} />
                   ))}
                 </Pie>
-                <Tooltip contentStyle={{ background: '#0d1420', border: '1px solid #1a2535', borderRadius: 12, color: '#e2e8f0' }} />
+                <Tooltip contentStyle={{ background: 'rgba(10, 12, 28, 0.85)', backdropFilter: 'blur(24px)', border: '1px solid rgba(139, 92, 246, 0.25)', borderRadius: '24px', color: '#ffffff', boxShadow: '0 0 15px rgba(139,92,246,0.2)' }} itemStyle={{ color: '#22d3ee' }} />
               </PieChart>
             </ResponsiveContainer>
           </div>
@@ -178,26 +185,37 @@ export function FinancePage() {
             <SectionLabel>History</SectionLabel>
             <Badge tone="muted">{tx.length}</Badge>
           </div>
-          <div className="mt-4 grid gap-2">
-            {tx.map((t) => (
-              <div key={t.id} className="flex items-center justify-between rounded-xl border border-border bg-bg/30 px-3 py-2">
-                <div>
-                  <div className="text-sm font-bold text-text">
-                    {t.category}{' '}
-                    <span className="mono text-muted">
-                      ₹{Number(t.amount ?? 0).toFixed(0)} • {new Date(t.date || t.createdAt).toLocaleDateString()}
-                    </span>
-                  </div>
-                  {t.note ? <div className="text-xs text-muted">{t.note}</div> : null}
-                </div>
-                <div className="flex items-center gap-2">
-                  <Badge tone={t.type === 'income' ? 'success' : 'danger'}>{t.type}</Badge>
-                  <button className="text-xs font-semibold text-muted hover:text-text transition duration-200" onClick={() => delTx(t.id)}>
-                    delete
-                  </button>
-                </div>
-              </div>
-            ))}
+          <div className="mt-4">
+            <AnimatePresence initial={false}>
+              <motion.div className="grid gap-2" layout>
+                {tx.map((t) => (
+                  <motion.div 
+                    key={t.id} 
+                    layout
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 10 }}
+                    className={`flex items-center justify-between rounded-xl border border-border bg-bg/30 px-3 py-2 ${t.id === newTxId ? 'animate-coinDrop ring-1 ring-gold shadow-glow' : ''}`}
+                  >
+                    <div>
+                      <div className="text-sm font-bold text-text">
+                        {t.category}{' '}
+                        <span className="mono text-muted">
+                          ₹{Number(t.amount ?? 0).toFixed(0)} • {new Date(t.date || t.createdAt).toLocaleDateString()}
+                        </span>
+                      </div>
+                      {t.note ? <div className="text-xs text-muted">{t.note}</div> : null}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge tone={t.type === 'income' ? 'success' : 'danger'}>{t.type}</Badge>
+                      <button className="text-xs font-semibold text-muted hover:text-text transition duration-200" onClick={() => delTx(t.id)}>
+                        delete
+                      </button>
+                    </div>
+                  </motion.div>
+                ))}
+              </motion.div>
+            </AnimatePresence>
           </div>
         </Card>
       )}

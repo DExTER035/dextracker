@@ -4,6 +4,8 @@ import { useAuth } from '../../providers/AuthProvider.jsx'
 import { useToast } from '../../ui/components/ToastProvider.jsx'
 import { Badge, Button, Card, Input, SectionLabel } from '../../ui/components/ui.jsx'
 import { PageShell } from '../_shared/PageShell.jsx'
+// eslint-disable-next-line no-unused-vars
+import { motion } from 'framer-motion'
 
 export function SettingsPage() {
   const { user } = useAuth()
@@ -78,7 +80,7 @@ export function SettingsPage() {
         const data = await fetchApi(ep)
         const name = ep.split('/').pop()
         results[name === user.id ? 'profile' : name] = data ?? []
-      } catch (error) {
+      } catch {
         toast.push({ tone: 'danger', text: `Export failed for: ${ep}` })
       }
     }
@@ -93,89 +95,116 @@ export function SettingsPage() {
 
   return (
     <PageShell label="Settings" title="Settings">
-      <Card>
-        <div className="flex items-center justify-between gap-4">
-          <SectionLabel>Profile</SectionLabel>
-          <Badge tone="muted">{email || '—'}</Badge>
-        </div>
-        <div className="mt-4 grid gap-3 md:grid-cols-3">
-          <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Name" />
-          <Input value={avatar} onChange={(e) => setAvatar(e.target.value)} placeholder="Avatar URL" />
-          <Button onClick={saveProfile}>Save</Button>
-        </div>
-      </Card>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ staggerChildren: 0.1 }}
+        className="grid gap-6"
+      >
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          <Card>
+            <div className="flex items-center justify-between gap-4">
+              <SectionLabel>Profile</SectionLabel>
+              <Badge tone="muted">{email || '—'}</Badge>
+            </div>
+            <div className="mt-4 grid gap-3 md:grid-cols-3">
+              <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Name" />
+              <Input value={avatar} onChange={(e) => setAvatar(e.target.value)} placeholder="Avatar URL" />
+              <Button onClick={saveProfile}>Save</Button>
+            </div>
+          </Card>
+        </motion.div>
 
-      <Card>
-        <div className="flex items-center justify-between gap-4">
-          <SectionLabel>AI</SectionLabel>
-          <Badge tone="muted">GEMINI 1.5 FLASH</Badge>
-        </div>
-        <div className="mt-4 grid gap-3 md:grid-cols-[1fr_auto]">
-          <Input value={geminiKey} onChange={(e) => setGeminiKey(e.target.value)} placeholder="Gemini API key" />
-          <Button onClick={saveSettings}>Save</Button>
-        </div>
-        <div className="mt-2 text-xs text-muted">Saved to your custom backend profile settings.</div>
-      </Card>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          <Card>
+            <div className="flex items-center justify-between gap-4">
+              <SectionLabel>AI</SectionLabel>
+              <Badge tone="muted">GEMINI 1.5 FLASH</Badge>
+            </div>
+            <div className="mt-4 grid gap-3 md:grid-cols-[1fr_auto]">
+              <Input value={geminiKey} onChange={(e) => setGeminiKey(e.target.value)} placeholder="Gemini API key" />
+              <Button onClick={saveSettings}>Save</Button>
+            </div>
+            <div className="mt-2 text-xs text-muted">Saved to your custom backend profile settings.</div>
+          </Card>
+        </motion.div>
 
-      <Card>
-        <SectionLabel>Preferences</SectionLabel>
-        <div className="mt-4 grid gap-3 md:grid-cols-3">
-          <select
-            value={theme}
-            onChange={(e) => setTheme(e.target.value)}
-            className="rounded-xl border border-border bg-bg/40 px-3 py-2 text-sm text-text transition duration-200 focus:border-primary/50 outline-none"
-          >
-            <option value="dark">dark</option>
-            <option value="light">light</option>
-          </select>
-          <select
-            value={language}
-            onChange={(e) => setLanguage(e.target.value)}
-            className="rounded-xl border border-border bg-bg/40 px-3 py-2 text-sm text-text transition duration-200 focus:border-primary/50 outline-none"
-          >
-            {['English', 'Hindi', 'Marathi'].map((l) => (
-              <option key={l} value={l}>
-                {l}
-              </option>
-            ))}
-          </select>
-          <label className="flex items-center gap-3 rounded-xl border border-border bg-bg/30 px-3 py-2 text-sm text-text">
-            <input type="checkbox" checked={notify} onChange={(e) => setNotify(e.target.checked)} />
-            Notifications
-          </label>
-        </div>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          <Card>
+            <SectionLabel>Preferences</SectionLabel>
+            <div className="mt-4 grid gap-3 md:grid-cols-3">
+              <select
+                value={theme}
+                onChange={(e) => setTheme(e.target.value)}
+                className="rounded-xl border border-border bg-bg/40 px-3 py-2 text-sm text-text transition duration-200 focus:border-primary/50 outline-none"
+              >
+                <option value="dark">dark</option>
+                <option value="light">light</option>
+              </select>
+              <select
+                value={language}
+                onChange={(e) => setLanguage(e.target.value)}
+                className="rounded-xl border border-border bg-bg/40 px-3 py-2 text-sm text-text transition duration-200 focus:border-primary/50 outline-none"
+              >
+                {['English', 'Hindi', 'Marathi'].map((l) => (
+                  <option key={l} value={l}>
+                    {l}
+                  </option>
+                ))}
+              </select>
+              <label className="flex items-center gap-3 rounded-xl border border-border bg-bg/30 px-3 py-2 text-sm text-text">
+                <input type="checkbox" checked={notify} onChange={(e) => setNotify(e.target.checked)} />
+                Notifications
+              </label>
+            </div>
 
-        <div className="mt-5 rounded-2xl border border-border bg-bg/30 p-4">
-          <SectionLabel>Section accent colors</SectionLabel>
-          <div className="mt-3 grid gap-3 md:grid-cols-3">
-            <label className="grid gap-2 text-sm text-text">
-              <span className="text-xs text-muted uppercase tracking-[0.24em]">Planner</span>
-              <Input value={plannerColor} onChange={(e) => setPlannerColor(e.target.value)} />
-            </label>
-            <label className="grid gap-2 text-sm text-text">
-              <span className="text-xs text-muted uppercase tracking-[0.24em]">Health</span>
-              <Input value={healthColor} onChange={(e) => setHealthColor(e.target.value)} />
-            </label>
-            <label className="grid gap-2 text-sm text-text">
-              <span className="text-xs text-muted uppercase tracking-[0.24em]">Finance</span>
-              <Input value={financeColor} onChange={(e) => setFinanceColor(e.target.value)} />
-            </label>
-          </div>
-          <div className="mt-3">
-            <Button variant="ghost" onClick={saveSettings}>
-              Save preferences
-            </Button>
-          </div>
-        </div>
-      </Card>
+            <div className="mt-5 rounded-2xl border border-border bg-bg/30 p-4">
+              <SectionLabel>Section accent colors</SectionLabel>
+              <div className="mt-3 grid gap-3 md:grid-cols-3">
+                <label className="grid gap-2 text-sm text-text">
+                  <span className="text-xs text-muted uppercase tracking-[0.24em]">Planner</span>
+                  <Input value={plannerColor} onChange={(e) => setPlannerColor(e.target.value)} />
+                </label>
+                <label className="grid gap-2 text-sm text-text">
+                  <span className="text-xs text-muted uppercase tracking-[0.24em]">Health</span>
+                  <Input value={healthColor} onChange={(e) => setHealthColor(e.target.value)} />
+                </label>
+                <label className="grid gap-2 text-sm text-text">
+                  <span className="text-xs text-muted uppercase tracking-[0.24em]">Finance</span>
+                  <Input value={financeColor} onChange={(e) => setFinanceColor(e.target.value)} />
+                </label>
+              </div>
+              <div className="mt-3">
+                <Button variant="ghost" onClick={saveSettings}>
+                  Save preferences
+                </Button>
+              </div>
+            </div>
+          </Card>
+        </motion.div>
 
-      <Card>
-        <SectionLabel>Export</SectionLabel>
-        <div className="mt-3 text-sm text-muted">Download all your local backend data as JSON.</div>
-        <div className="mt-4">
-          <Button onClick={exportAll}>Export JSON</Button>
-        </div>
-      </Card>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          <Card>
+            <SectionLabel>Export</SectionLabel>
+            <div className="mt-3 text-sm text-muted">Download all your local backend data as JSON.</div>
+            <div className="mt-4">
+              <Button onClick={exportAll}>Export JSON</Button>
+            </div>
+          </Card>
+        </motion.div>
+      </motion.div>
     </PageShell>
   )
 }

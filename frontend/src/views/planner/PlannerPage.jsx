@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Trash2 } from 'lucide-react'
+import { CheckCircle2, Trash2 } from 'lucide-react'
+// eslint-disable-next-line no-unused-vars
+import { motion, AnimatePresence } from 'framer-motion'
 import { fetchApi } from '../../lib/api.js'
 import { todayISO } from '../../lib/date.js'
 import { XP, addXp } from '../../lib/xp.js'
@@ -19,11 +21,13 @@ export function PlannerPage() {
   const [tasks, setTasks] = useState([])
   const [taskText, setTaskText] = useState('')
   const [priority, setPriority] = useState('medium')
+  const [justCompletedId, setJustCompletedId] = useState(null)
 
   // Habits
   const [habits, setHabits] = useState([])
   const [habitName, setHabitName] = useState('')
   const [habitIcon, setHabitIcon] = useState('🔥')
+  const [justHabitId, setJustHabitId] = useState(null)
 
   // Mood
   const [moodToday, setMoodToday] = useState(null)
@@ -82,11 +86,11 @@ export function PlannerPage() {
              .then(res => setEntries((res ?? []).reverse()))
              .catch(() => setPinOk(false)) 
         }
-      } catch (err) {
+      } catch {
         toast.push({ tone: 'danger', text: 'Failed to load planner data' })
       }
     })()
-  }, [user?.id, today])
+  }, [user?.id, today, toast, pin])
 
   async function addTask() {
     const text = taskText.trim()
@@ -114,6 +118,8 @@ export function PlannerPage() {
       })
       setTasks((x) => x.map((y) => (y.id === t.id ? { ...y, done: nextDone } : y)))
       if (nextDone) {
+        setJustCompletedId(t.id)
+        setTimeout(() => setJustCompletedId(null), 1000)
         const r = await addXp(user.id, XP.task, 'Completed Task')
         if (r.ok) toast.push({ tone: 'success', text: `+${XP.task} XP` })
       }
@@ -126,7 +132,7 @@ export function PlannerPage() {
     try {
       await fetchApi(`/api/${user.id}/tasks/${id}`, { method: 'DELETE' })
       setTasks((x) => x.filter((y) => y.id !== id))
-    } catch(err) {}
+    } catch { /* ignore */ }
   }
 
   function habitDoneToday(h) {
@@ -161,6 +167,8 @@ export function PlannerPage() {
         body: JSON.stringify({ completedDates: next, streak: (h.streak || 0) + 1 })
       })
       setHabits((x) => x.map((y) => (y.id === h.id ? { ...y, completedDates: next, streak: (y.streak || 0) + 1 } : y)))
+      setJustHabitId(h.id)
+      setTimeout(() => setJustHabitId(null), 1000)
       const r = await addXp(user.id, XP.habit, 'Completed Habit')
       if (r.ok) toast.push({ tone: 'success', text: `+${XP.habit} XP` })
     } catch (error) {
@@ -221,7 +229,7 @@ export function PlannerPage() {
          const res = await fetchApi(`/api/${user.id}/journal?pin=${pin}`)
          setEntries((res ?? []).reverse())
          setPinOk(true)
-       } catch (err) {
+       } catch {
          toast.push({ tone: 'danger', text: 'Wrong PIN.' })
          setPinOk(false)
        }
@@ -290,37 +298,62 @@ export function PlannerPage() {
               <EmptyState title="No tasks yet" message="Add one. Then finish it. (+20 XP)" />
             </div>
           ) : (
-            <div className="mt-6 grid gap-2">
-              {tasks.map((t) => (
-                <div
-                  key={t.id}
-                  className="flex items-center justify-between gap-3 rounded-xl border border-border bg-bg/30 px-3 py-2 transition duration-200 hover:shadow-glow"
-                >
-                  <label className="flex items-center gap-3 text-sm text-text">
-                    <input type="checkbox" checked={!!t.done} onChange={() => toggleTask(t)} />
-                    <span className={t.done ? 'line-through text-muted' : ''}>{t.text}</span>
-                    <span
-                      className={
-                        'ml-2 rounded-full border px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.18em] ' +
-                        (t.priority === 'high'
-                          ? 'border-danger/30 bg-danger/10 text-danger'
-                          : t.priority === 'low'
-                            ? 'border-border bg-white/5 text-muted'
-                            : 'border-gold/30 bg-gold/10 text-gold')
-                      }
+            <div className="mt-6">
+              <AnimatePresence initial={false}>
+                <motion.div className="grid gap-2" layout>
+                  {tasks.map((t) => (
+                    <motion.div
+                      key={t.id}
+                      layout
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                      className={`flex items-center justify-between gap-3 rounded-xl border border-border bg-bg/30 px-3 py-2 transition duration-200 hover:shadow-glow relative overflow-hidden ${justCompletedId === t.id ? 'animate-rippleBurst ring-1 ring-success' : ''}`}
                     >
-                      {t.priority}
-                    </span>
-                  </label>
-                  <button
-                    onClick={() => deleteTask(t.id)}
-                    className="rounded-lg p-2 text-muted transition duration-200 hover:bg-white/5 hover:text-text"
-                    aria-label="Delete"
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-              ))}
+                      <label className="flex items-center gap-3 text-sm text-text cursor-pointer group">
+                        <motion.div 
+                          whileTap={{ scale: 0.9 }}
+                          onClick={() => toggleTask(t)} 
+                          className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${t.done ? 'bg-cyan border-cyan shadow-glow' : 'border-muted group-hover:border-white'}`}
+                        >
+                          {t.done && (
+                            <motion.div
+                              initial={{ scale: 0 }}
+                              animate={{ scale: 1 }}
+                              transition={{ type: 'spring', stiffness: 500, damping: 20 }}
+                            >
+                              <CheckCircle2 size={14} className="text-bg" />
+                            </motion.div>
+                          )}
+                        </motion.div>
+                        <span className={`transition-colors ${t.done ? 'line-through text-muted' : ''}`} onClick={(e) => { e.preventDefault(); toggleTask(t); }}>{t.text}</span>
+                        <span
+                          className={
+                            'ml-2 rounded-full border px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.18em] ' +
+                            (t.priority === 'high'
+                              ? 'border-danger/30 bg-danger/10 text-danger'
+                              : t.priority === 'low'
+                                ? 'border-border bg-white/5 text-muted'
+                                : 'border-gold/30 bg-gold/10 text-gold')
+                          }
+                        >
+                          {t.priority}
+                        </span>
+                      </label>
+                      <motion.button
+                        whileHover={{ scale: 1.1, color: '#ef4444' }}
+                        whileTap={{ scale: 0.9 }}
+                        onClick={() => deleteTask(t.id)}
+                        className="rounded-lg p-2 text-muted transition duration-200 hover:bg-white/5"
+                        aria-label="Delete"
+                      >
+                        <Trash2 size={16} />
+                      </motion.button>
+                    </motion.div>
+                  ))}
+                </motion.div>
+              </AnimatePresence>
             </div>
           )}
         </Card>
@@ -362,48 +395,73 @@ export function PlannerPage() {
               <EmptyState title="No habits yet" message="Add one. Complete it daily. (+15 XP)" />
             </div>
           ) : (
-            <div className="mt-6 grid gap-2">
-              {habits.map((h) => {
-                const done = habitDoneToday(h)
-                return (
-                  <div
-                    key={h.id}
-                    className="flex items-center justify-between gap-3 rounded-xl border border-border bg-bg/30 px-3 py-2 transition duration-200 hover:shadow-glow"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="grid h-9 w-9 place-items-center rounded-xl border border-border bg-white/5">
-                        <span className="text-lg">{h.icon}</span>
+            <motion.div className="mt-6 grid gap-2" layout>
+              <AnimatePresence initial={false}>
+                {habits.map((h) => {
+                  const done = habitDoneToday(h)
+                  return (
+                    <motion.div
+                      key={h.id}
+                      layout
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      className="flex items-center justify-between gap-3 rounded-xl border border-border bg-bg/30 px-3 py-2 transition duration-200 hover:shadow-glow"
+                    >
+                      <div className="flex items-center gap-3">
+                        <motion.div 
+                          className={`grid h-9 w-9 place-items-center rounded-xl border border-border bg-white/5`}
+                          animate={justHabitId === h.id ? { 
+                            scale: [1, 1.3, 1],
+                            boxShadow: ["0 0 0px rgba(139, 92, 246, 0)", "0 0 20px rgba(139, 92, 246, 0.6)", "0 0 0px rgba(139, 92, 246, 0)"]
+                          } : {}}
+                          transition={{ duration: 0.5 }}
+                        >
+                          <span className="text-lg">{h.icon}</span>
+                        </motion.div>
+                        <div>
+                          <div className="text-sm font-bold text-text">{h.name}</div>
+                          <motion.div 
+                            key={h.streak}
+                            initial={{ opacity: 0.5 }}
+                            animate={{ opacity: 1 }}
+                            className="text-xs text-muted"
+                          >
+                            Streak: {h.streak ?? 0}
+                          </motion.div>
+                        </div>
                       </div>
-                      <div>
-                        <div className="text-sm font-bold text-text">{h.name}</div>
-                        <div className="text-xs text-muted">Streak: {h.streak ?? 0}</div>
+                      <div className="flex items-center gap-2">
+                        <div className="flex gap-1">
+                          {week.map((d) => {
+                            const arr = Array.isArray(h.completedDates) ? h.completedDates : []
+                            const filled = arr.includes(d.iso)
+                            return (
+                              <motion.div
+                                key={d.iso}
+                                initial={false}
+                                animate={{ 
+                                  scale: filled ? 1.2 : 1,
+                                  backgroundColor: filled ? '#8b5cf6' : 'rgba(255, 255, 255, 0)'
+                                }}
+                                className={
+                                  'h-2.5 w-2.5 rounded-full ring-1 ' +
+                                  (filled ? 'ring-primary/40' : 'ring-border/70')
+                                }
+                                title={d.iso}
+                              />
+                            )
+                          })}
+                        </div>
+                        <Button onClick={() => completeHabit(h)} disabled={done} variant={done ? 'ghost' : 'primary'}>
+                          {done ? 'Done' : `Complete (+${XP.habit} XP)`}
+                        </Button>
                       </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="flex gap-1">
-                        {week.map((d) => {
-                          const arr = Array.isArray(h.completed_dates) ? h.completed_dates : []
-                          const filled = arr.includes(d.iso)
-                          return (
-                            <div
-                              key={d.iso}
-                              className={
-                                'h-2.5 w-2.5 rounded-full ring-1 transition duration-200 ' +
-                                (filled ? 'bg-primary ring-primary/40' : 'bg-transparent ring-border/70')
-                              }
-                              title={d.iso}
-                            />
-                          )
-                        })}
-                      </div>
-                      <Button onClick={() => completeHabit(h)} disabled={done} variant={done ? 'ghost' : 'primary'}>
-                        {done ? 'Done' : `Complete (+${XP.habit} XP)`}
-                      </Button>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
+                    </motion.div>
+                  )
+                })}
+              </AnimatePresence>
+            </motion.div>
           )}
         </Card>
       ) : null}
@@ -414,49 +472,63 @@ export function PlannerPage() {
             <SectionLabel>Mood</SectionLabel>
             {moodToday ? <Badge tone="success">LOGGED</Badge> : <Badge tone="muted">TODAY</Badge>}
           </div>
-          {moodToday ? (
-            <div className="mt-4 rounded-2xl border border-border bg-bg/30 p-4">
-              <div className="text-sm text-text">
-                Today: <span className="font-bold">{moodToday.label}</span> ({moodToday.value}/5)
-              </div>
-              {moodToday.note ? <div className="mt-2 text-sm text-muted">{moodToday.note}</div> : null}
-            </div>
-          ) : (
-            <>
-              <div className="mt-4 flex flex-wrap gap-2">
-                {[
-                  { v: 1, e: '😖', l: 'awful' },
-                  { v: 2, e: '😕', l: 'bad' },
-                  { v: 3, e: '😐', l: 'okay' },
-                  { v: 4, e: '🙂', l: 'good' },
-                  { v: 5, e: '😁', l: 'amazing' },
-                ].map((m) => (
-                  <button
-                    key={m.v}
-                    onClick={() => setMoodValue(m.v)}
-                    className={
-                      'flex items-center gap-2 rounded-full border px-3 py-2 text-sm font-semibold transition duration-200 ' +
-                      (m.v === moodValue ? 'border-primary/40 bg-primary/15 text-primary' : 'border-border bg-white/5 text-text hover:bg-white/10')
-                    }
-                  >
-                    <span className="text-lg">{m.e}</span>
-                    {m.l}
-                  </button>
-                ))}
-              </div>
-              <div className="mt-4">
-                <textarea
-                  value={moodNote}
-                  onChange={(e) => setMoodNote(e.target.value)}
-                  placeholder="Optional note…"
-                  className="min-h-24 w-full rounded-2xl border border-border bg-bg/40 px-3 py-2 text-sm text-text placeholder:text-muted outline-none transition duration-200 focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
-                />
-              </div>
-              <div className="mt-3">
-                <Button onClick={logMood}>Log (+{XP.mood} XP)</Button>
-              </div>
-            </>
-          )}
+          <AnimatePresence mode="wait">
+            {moodToday ? (
+              <motion.div 
+                key="mood-logged"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="mt-4 rounded-2xl border border-border bg-bg/30 p-4"
+              >
+                <div className="text-sm text-text">
+                  Today: <span className="font-bold">{moodToday.label}</span> ({moodToday.score}/5)
+                </div>
+                {moodToday.note ? <div className="mt-2 text-sm text-muted">{moodToday.note}</div> : null}
+              </motion.div>
+            ) : (
+              <motion.div 
+                key="mood-form"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+              >
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {[
+                    { v: 1, e: '😖', l: 'awful' },
+                    { v: 2, e: '😕', l: 'bad' },
+                    { v: 3, e: '😐', l: 'okay' },
+                    { v: 4, e: '🙂', l: 'good' },
+                    { v: 5, e: '😁', l: 'amazing' },
+                  ].map((m) => (
+                    <motion.button
+                      key={m.v}
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => setMoodValue(m.v)}
+                      className={
+                        'flex items-center gap-2 rounded-full border px-3 py-2 text-sm font-semibold transition duration-200 ' +
+                        (m.v === moodValue ? 'border-primary/40 bg-primary/15 text-primary shadow-[0_0_15px_rgba(139,92,246,0.3)]' : 'border-border bg-white/5 text-text hover:bg-white/10')
+                      }
+                    >
+                      <span className="text-lg">{m.e}</span>
+                      {m.l}
+                    </motion.button>
+                  ))}
+                </div>
+                <div className="mt-4">
+                  <textarea
+                    value={moodNote}
+                    onChange={(e) => setMoodNote(e.target.value)}
+                    placeholder="Optional note…"
+                    className="min-h-24 w-full rounded-2xl border border-border bg-bg/40 px-3 py-2 text-sm text-text placeholder:text-muted outline-none transition duration-200 focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
+                  />
+                </div>
+                <div className="mt-3">
+                  <Button onClick={logMood}>Log (+{XP.mood} XP)</Button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </Card>
       ) : null}
 
@@ -493,16 +565,27 @@ export function PlannerPage() {
                   <EmptyState title="No entries yet" message="Write one. Your future self will thank you." />
                 </div>
               ) : (
-                <div className="mt-6 grid gap-3">
-                  {entries.map((e) => (
-                    <div key={e.id} className="rounded-2xl border border-border bg-bg/30 p-4">
-                      <div className="flex items-center justify-between gap-4">
-                        <div className="text-sm font-bold text-text">{e.title}</div>
-                        <div className="text-xs text-muted mono">{new Date(e.created_at).toLocaleString()}</div>
-                      </div>
-                      <div className="mt-2 text-sm text-muted whitespace-pre-wrap">{e.text}</div>
-                    </div>
-                  ))}
+                <div className="mt-6">
+                  <AnimatePresence initial={false}>
+                    <motion.div className="grid gap-3" layout>
+                      {entries.map((e) => (
+                        <motion.div
+                          key={e.id}
+                          layout
+                          initial={{ opacity: 0, scale: 0.98 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.98 }}
+                          className="rounded-2xl border border-border bg-bg/30 p-4"
+                        >
+                          <div className="flex items-center justify-between gap-4">
+                            <div className="text-sm font-bold text-text">{e.title}</div>
+                            <div className="text-xs text-muted mono">{new Date(e.created_at || e.createdAt).toLocaleString()}</div>
+                          </div>
+                          <div className="mt-2 text-sm text-muted whitespace-pre-wrap">{e.text}</div>
+                        </motion.div>
+                      ))}
+                    </motion.div>
+                  </AnimatePresence>
                 </div>
               )}
             </>

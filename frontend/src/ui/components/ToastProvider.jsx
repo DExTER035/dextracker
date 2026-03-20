@@ -25,7 +25,7 @@ export function ToastProvider({ children }) {
           <div
             key={t.id}
             className={cn(
-              'rounded-2xl border px-4 py-3 text-sm font-semibold shadow-[0_20px_50px_rgba(0,0,0,0.55)] backdrop-blur transition duration-200',
+              'rounded-2xl border px-4 py-3 text-sm font-semibold shadow-[0_20px_50px_rgba(0,0,0,0.55)] backdrop-blur transition duration-200 animate-slideInRight',
               t.tone === 'success'
                 ? 'border-success/30 bg-success/10 text-success'
                 : t.tone === 'danger'
@@ -41,6 +41,7 @@ export function ToastProvider({ children }) {
   )
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useToast() {
   const v = useContext(ToastCtx)
   if (!v) throw new Error('useToast must be used within ToastProvider')

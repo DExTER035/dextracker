@@ -4,6 +4,8 @@ import { useAuth } from '../../providers/AuthProvider.jsx'
 import { useToast } from '../../ui/components/ToastProvider.jsx'
 import { Badge, Button, Card, Input, SectionLabel } from '../../ui/components/ui.jsx'
 import { PageShell } from '../_shared/PageShell.jsx'
+// eslint-disable-next-line no-unused-vars
+import { motion, AnimatePresence } from 'framer-motion'
 
 export function AiChatPage() {
   const { user } = useAuth()
@@ -159,7 +161,12 @@ export function AiChatPage() {
         </div>
       }
     >
-      <Card>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+      >
+        <Card>
         <div className="flex flex-wrap gap-2">
           <Button variant="ghost" onClick={() => quick('Call me out.')}>
             Call me out
@@ -179,35 +186,67 @@ export function AiChatPage() {
         </div>
 
         <div className="mt-5 grid gap-3">
-          {messages.length === 0 ? (
-            <div className="rounded-2xl border border-border bg-bg/30 p-4 text-sm text-muted">
-              Add your Gemini key in Settings → AI. Then start typing. If the model returns{' '}
-              <span className="mono text-text">[CHOICE: A | B]</span>, you’ll get clickable buttons.
-            </div>
-          ) : (
-            messages.map((m) => (
-              <div key={m.id} className={'rounded-2xl border p-4 ' + (m.role === 'user' ? 'border-primary/25 bg-primary/10' : 'border-border bg-bg/30')}>
-                <div className="flex items-center justify-between gap-4">
-                  <div className="text-xs font-semibold uppercase tracking-[0.24em] text-muted">{m.role === 'user' ? 'YOU' : 'AI'}</div>
-                  <div className="text-[11px] text-muted mono">{new Date(m.ts).toLocaleTimeString()}</div>
-                </div>
-                <div className="mt-2 whitespace-pre-wrap text-sm text-text">{m.text}</div>
-                {m.choices?.length ? (
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {m.choices.map((c) => (
-                      <button
-                        key={c}
-                        onClick={() => send(c)}
-                        className="rounded-full border border-primary/35 bg-primary/15 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-primary transition duration-200 hover:brightness-110"
-                      >
-                        {c}
-                      </button>
-                    ))}
+          <AnimatePresence>
+            {messages.length === 0 ? (
+              <motion.div
+                key="empty"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="rounded-2xl border border-border bg-bg/30 p-4 text-sm text-muted"
+              >
+                Add your Gemini key in Settings → AI. Then start typing. If the model returns{' '}
+                <span className="mono text-text">[CHOICE: A | B]</span>, you’ll get clickable buttons.
+              </motion.div>
+            ) : (
+              messages.map((m) => (
+                <motion.div
+                  key={m.id}
+                  layout
+                  initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+                  className={'rounded-2xl border p-4 ' + (m.role === 'user' ? 'border-primary/25 bg-primary/10' : 'border-border bg-bg/30')}
+                >
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="text-xs font-semibold uppercase tracking-[0.24em] text-muted">{m.role === 'user' ? 'YOU' : 'AI'}</div>
+                    <div className="text-[11px] text-muted mono">{new Date(m.ts).toLocaleTimeString()}</div>
                   </div>
-                ) : null}
-              </div>
-            ))
-          )}
+                  <div className="mt-2 whitespace-pre-wrap text-sm text-text">{m.text}</div>
+                  {m.choices?.length ? (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {m.choices.map((c) => (
+                        <button
+                          key={c}
+                          onClick={() => send(c)}
+                          className="rounded-full border border-primary/35 bg-primary/15 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-primary transition duration-200 hover:brightness-110"
+                        >
+                          {c}
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
+                </motion.div>
+              ))
+            )}
+            {busy && (
+              <motion.div
+                key="thinking"
+                initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="rounded-2xl border border-border bg-bg/30 p-4"
+              >
+                <div className="text-xs font-semibold uppercase tracking-[0.24em] text-muted mb-2">AI</div>
+                <div className="flex items-center gap-1.5 h-5">
+                  <div className="w-1.5 h-1.5 rounded-full bg-primary/60 animate-[pulse_1.5s_ease-in-out_infinite]" />
+                  <div className="w-1.5 h-1.5 rounded-full bg-primary/60 animate-[pulse_1.5s_ease-in-out_0.2s_infinite]" />
+                  <div className="w-1.5 h-1.5 rounded-full bg-primary/60 animate-[pulse_1.5s_ease-in-out_0.4s_infinite]" />
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
         <div className="mt-5 grid gap-2 md:grid-cols-[1fr_auto_auto]">
@@ -221,8 +260,13 @@ export function AiChatPage() {
         </div>
 
         {speaking ? (
-          <div className="mt-4 h-8 overflow-hidden rounded-2xl border border-border bg-bg/30 p-2">
-            <div className="flex h-full items-center gap-1">
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="mt-4 overflow-hidden rounded-2xl border border-border bg-bg/30 p-2"
+          >
+            <div className="flex h-8 items-center gap-1">
               {Array.from({ length: 24 }).map((_, i) => (
                 <div
                   key={i}
@@ -231,9 +275,10 @@ export function AiChatPage() {
                 />
               ))}
             </div>
-          </div>
+          </motion.div>
         ) : null}
       </Card>
+      </motion.div>
     </PageShell>
   )
 }

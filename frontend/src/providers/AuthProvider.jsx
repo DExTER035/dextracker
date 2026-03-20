@@ -27,6 +27,7 @@ export function AuthProvider({ children }) {
           .finally(() => setLoading(false))
       } catch {
         localStorage.removeItem('dextracker_user')
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setUser(null)
         setLoading(false)
       }
@@ -58,6 +59,7 @@ export function AuthProvider({ children }) {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useAuth() {
   const v = useContext(AuthContext)
   if (!v) throw new Error('useAuth must be used within AuthProvider')

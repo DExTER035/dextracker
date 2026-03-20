@@ -21,11 +21,11 @@ export function GoalsPage() {
         const data = await fetchApi(`/api/${user.id}/goals`)
         const sorted = (data ?? []).sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt))
         setGoals(sorted)
-      } catch (err) {
+      } catch {
         toast.push({ tone: 'danger', text: 'Error loading goals' })
       }
     })()
-  }, [user?.id])
+  }, [user?.id, toast])
 
   async function addGoal() {
     if (!user?.id) return
@@ -83,7 +83,7 @@ export function GoalsPage() {
     try {
       await fetchApi(`/api/${user.id}/goals/${goalId}`, { method: 'DELETE' })
       setGoals((x) => x.filter((y) => y.id !== goalId))
-    } catch (err) {}
+    } catch { /* ignore */ }
   }
 
   const streak = useMemo(() => {

@@ -7,6 +7,8 @@ import { EmptyState } from '../../ui/components/EmptyState.jsx'
 import { useToast } from '../../ui/components/ToastProvider.jsx'
 import { Badge, Button, Card, Input, SectionLabel } from '../../ui/components/ui.jsx'
 import { PageShell } from '../_shared/PageShell.jsx'
+// eslint-disable-next-line no-unused-vars
+import { motion } from 'framer-motion'
 
 export function FitnessPage() {
   const { user } = useAuth()
@@ -36,11 +38,11 @@ export function FitnessPage() {
         const data = await fetchApi(`/api/${user.id}/fitness`)
         const sorted = (data ?? []).sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt))
         setWorkouts(sorted.slice(0, 200))
-      } catch (err) {
+      } catch {
         toast.push({ tone: 'danger', text: 'Failed to load workouts.' })
       }
     })()
-  }, [user?.id])
+  }, [user?.id, toast])
 
   async function logWorkout() {
     if (!user?.id) return
@@ -67,7 +69,7 @@ export function FitnessPage() {
     try {
       await fetchApi(`/api/${user.id}/fitness/${id}`, { method: 'DELETE' })
       setWorkouts((x) => x.filter((y) => y.id !== id))
-    } catch(err) {}
+    } catch { /* ignore */ }
   }
 
   const weekly = useMemo(() => {
@@ -92,7 +94,11 @@ export function FitnessPage() {
 
   return (
     <PageShell label="Fitness" title="Fitness">
-      <div className="grid gap-6 md:grid-cols-3">
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="grid gap-6 md:grid-cols-3"
+      >
         <Card>
           <SectionLabel>This week</SectionLabel>
           <div className="mt-2 text-2xl font-bold text-text mono">{weekly.minutes} min</div>
@@ -108,36 +114,42 @@ export function FitnessPage() {
           <div className="mt-2 text-2xl font-bold text-primary mono">+{weekly.sessions * XP.workout}</div>
           <div className="mt-1 text-sm text-muted">from workouts</div>
         </Card>
-      </div>
+      </motion.div>
 
-      <Card>
-        <div className="flex items-center justify-between gap-4">
-          <SectionLabel>Log workout</SectionLabel>
-          <Badge tone="gold">+{XP.workout} XP</Badge>
-        </div>
-        <div className="mt-4 grid grid-cols-2 gap-2 md:grid-cols-9">
-          {activities.map((a) => (
-            <button
-              key={a}
-              onClick={() => setActivity(a)}
-              className={
-                'rounded-xl border px-3 py-2 text-sm font-semibold capitalize transition duration-200 ' +
-                (activity === a ? 'border-primary/40 bg-primary/15 text-primary' : 'border-border bg-white/5 text-text hover:bg-white/10')
-              }
-            >
-              {a}
-            </button>
-          ))}
-        </div>
-        <div className="mt-4 grid gap-3 md:grid-cols-3">
-          <Input value={duration} onChange={(e) => setDuration(e.target.value)} placeholder="Duration (minutes)" />
-          <Input value={calories} onChange={(e) => setCalories(e.target.value)} placeholder="Calories burned" />
-          <Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Notes (optional)" />
-        </div>
-        <div className="mt-3">
-          <Button onClick={logWorkout}>Log workout</Button>
-        </div>
-      </Card>
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.15 }}
+      >
+        <Card>
+          <div className="flex items-center justify-between gap-4">
+            <SectionLabel>Log workout</SectionLabel>
+            <Badge tone="gold">+{XP.workout} XP</Badge>
+          </div>
+          <div className="mt-4 grid grid-cols-2 gap-2 md:grid-cols-9">
+            {activities.map((a) => (
+              <button
+                key={a}
+                onClick={() => setActivity(a)}
+                className={
+                  'rounded-xl border px-3 py-2 text-sm font-semibold capitalize transition duration-200 ' +
+                  (activity === a ? 'border-primary/40 bg-primary/15 text-primary' : 'border-border bg-white/5 text-text hover:bg-white/10')
+                }
+              >
+                {a}
+              </button>
+            ))}
+          </div>
+          <div className="mt-4 grid gap-3 md:grid-cols-3">
+            <Input value={duration} onChange={(e) => setDuration(e.target.value)} placeholder="Duration (minutes)" />
+            <Input value={calories} onChange={(e) => setCalories(e.target.value)} placeholder="Calories burned" />
+            <Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Notes (optional)" />
+          </div>
+          <div className="mt-3">
+            <Button onClick={logWorkout}>Log workout</Button>
+          </div>
+        </Card>
+      </motion.div>
 
       {workouts.length === 0 ? (
         <EmptyState title="No workouts yet" message="Log something small. Consistency beats intensity." />

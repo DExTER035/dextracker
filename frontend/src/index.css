@@ -1,16 +1,18 @@
 @import "tailwindcss";
 
 :root {
-  --bg: #060d14;
-  --surface: #0b1522;
-  --border: #13273e;
-  --primary: #00e5ff;
-  --gold: #f59e0b;
+  --bg: #04050a;
+  --surface: rgba(10, 12, 28, 0.85);
+  --border: rgba(139, 92, 246, 0.25);
+  --primary: #8b5cf6;
+  --gold: #fbbf24;
   --danger: #ef4444;
   --success: #34d399;
+  --warning: #fb923c;
   --text: #ffffff;
-  --muted: #6486a0;
+  --muted: #94a3b8;
 
+  --font-heading: "Orbitron", "Exo 2", sans-serif;
   --font-ui: "Inter", system-ui, -apple-system, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
 
@@ -26,12 +28,70 @@ body {
   height: 100%;
 }
 
+@keyframes floatOrb {
+  0% { transform: translate(0, 0) scale(1); opacity: 0.3; }
+  33% { transform: translate(40px, -60px) scale(1.1); opacity: 0.5; }
+  66% { transform: translate(-30px, 30px) scale(0.9); opacity: 0.4; }
+  100% { transform: translate(0, 0) scale(1); opacity: 0.3; }
+}
+
+@keyframes starDrift {
+  from { background-position: 0 0; }
+  to { background-position: -1000px 1000px; }
+}
+
 body {
   margin: 0;
-  background: radial-gradient(1000px circle at 50% 0%, rgba(0, 229, 255, 0.12), transparent 60%),
-    radial-gradient(800px circle at 50% 100%, rgba(0, 229, 255, 0.05), transparent 50%),
-    var(--bg);
+  background-color: var(--bg);
+  background-image: 
+    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 40px 40px, 40px 40px;
   color: var(--text);
+  overflow-x: hidden;
+}
+
+body::before,
+body::after {
+  content: "";
+  position: fixed;
+  border-radius: 50%;
+  filter: blur(100px);
+  z-index: -3;
+  pointer-events: none;
+  animation: floatOrb 25s infinite ease-in-out;
+}
+
+body::before {
+  top: -10vw;
+  left: -10vw;
+  width: 50vw;
+  height: 50vw;
+  background: radial-gradient(circle, rgba(139, 92, 246, 0.25), transparent 70%);
+  animation-delay: -5s;
+}
+
+body::after {
+  bottom: -20vw;
+  right: -10vw;
+  width: 60vw;
+  height: 60vw;
+  background: radial-gradient(circle, rgba(34, 211, 238, 0.2), transparent 70%);
+}
+
+.starfield-layer {
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+  background-image: 
+    radial-gradient(1.5px 1.5px at 15% 20%, #ffffff, rgba(0,0,0,0)),
+    radial-gradient(1px 1px at 45% 45%, rgba(255,255,255,0.6), rgba(0,0,0,0)),
+    radial-gradient(2px 2px at 80% 10%, rgba(255,255,255,0.8), rgba(0,0,0,0)),
+    radial-gradient(1px 1px at 25% 75%, #ffffff, rgba(0,0,0,0)),
+    radial-gradient(1.5px 1.5px at 90% 85%, rgba(255,255,255,0.7), rgba(0,0,0,0));
+  background-size: 300px 300px;
+  animation: starDrift 100s linear infinite;
 }
 
 * {
@@ -44,4 +104,155 @@ body {
 
 .mono {
   font-family: var(--font-mono);
+}
+
+/* Global Animation Utilities */
+.animate-glow {
+  animation: glow 2s ease-in-out infinite alternate;
+}
+
+@keyframes glow {
+  from { box-shadow: 0 0 5px var(--primary), 0 0 10px var(--primary); }
+  to { box-shadow: 0 0 10px var(--primary), 0 0 20px var(--primary); }
+}
+
+/* Button & Interactive Scale */
+.btn-press:active {
+  transform: scale(0.95);
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(139, 92, 246, 0.3);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(139, 92, 246, 0.5);
+}
+
+/* Glassmorphism Utility */
+.glass {
+  background: rgba(10, 12, 28, 0.6);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(139, 92, 246, 0.2);
+}
+
+.glass-hover:hover {
+  background: rgba(10, 12, 28, 0.8);
+  border-color: rgba(139, 92, 246, 0.4);
+}
+
+/* Global Effects Animations */
+@keyframes floatText {
+  0% { transform: translateY(0); opacity: 0; }
+  20% { opacity: 1; }
+  80% { opacity: 1; }
+  100% { transform: translateY(-40px); opacity: 0; }
+}
+
+.animate-floatText {
+  animation: floatText 2s ease-out forwards;
+}
+
+@keyframes pageFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.animate-pageFadeIn {
+  animation: pageFadeIn 0.3s ease-out;
+}
+
+@keyframes wobble {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-5deg); }
+  75% { transform: rotate(5deg); }
+}
+
+.animate-wobble {
+  animation: wobble 0.5s ease-in-out infinite;
+}
+
+@keyframes badgeFlip {
+  0% { transform: perspective(400px) rotateY(90deg); opacity: 0; }
+  40% { transform: perspective(400px) rotateY(-10deg); }
+  70% { transform: perspective(400px) rotateY(10deg); }
+  100% { transform: perspective(400px) rotateY(0deg); opacity: 1; }
+}
+
+.animate-badgeFlip {
+  animation: badgeFlip 0.8s ease-out forwards;
+}
+
+@keyframes fireRain {
+  0% { transform: translateY(-10vh) scale(1); opacity: 0; }
+  10% { opacity: 1; }
+  100% { transform: translateY(110vh) scale(0.5); opacity: 0; }
+}
+
+.animate-fireRain {
+  animation: fireRain linear forwards;
+  animation-duration: inherit;
+}
+
+@keyframes drawCheck {
+  0% { stroke-dashoffset: 100; opacity: 0; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1.1); }
+  100% { stroke-dashoffset: 0; opacity: 1; transform: scale(1); }
+}
+
+.animate-drawCheck {
+  /* Using standard stroke properties for SVG icons */
+  stroke-dasharray: 100;
+  stroke-dashoffset: 100;
+  animation: drawCheck 0.6s ease-out forwards;
+}
+
+@keyframes flicker {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.8; transform: scale(0.95); }
+  25%, 75% { opacity: 0.9; transform: scale(1.05); }
+}
+
+.animate-flicker {
+  animation: flicker 1.5s ease-in-out infinite;
+}
+
+@keyframes coinFlip {
+  0% { transform: rotateY(0); }
+  100% { transform: rotateY(360deg); }
+}
+
+.animate-coinFlip {
+  animation: coinFlip 1s ease-in-out;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-2px) rotate(-2deg); }
+  75% { transform: translateX(2px) rotate(2deg); }
+}
+
+.animate-shake {
+  animation: shake 0.4s ease-in-out infinite;
+}
+
+@keyframes pulseSoft {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.8; transform: scale(0.98); }
+}
+
+.animate-pulseSoft {
+  animation: pulseSoft 3s ease-in-out infinite;
 }

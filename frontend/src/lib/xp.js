@@ -31,6 +31,21 @@ export async function addXp(userId, delta, reason = 'activity') {
       body: JSON.stringify({ amount: delta, reason, time: new Date().toISOString() })
     })
     
+    // Dispatch events for global effect rendering (XP Float, Level up, Badges)
+    window.dispatchEvent(new CustomEvent('dex:xp', { detail: { amount: delta } }))
+    
+    // Attempt local storage comparison to guess level-ups if we didn't get a strict prev_level response
+    const key = `dex:lev:${userId}`
+    const prevLev = Number(localStorage.getItem(key)) || 1
+    if (data.level && data.level > prevLev) {
+      localStorage.setItem(key, data.level)
+      if (prevLev > 0) window.dispatchEvent(new CustomEvent('dex:levelup', { detail: { level: data.level } }))
+    }
+    
+    if (data.newBadges?.length > 0) {
+       data.newBadges.forEach(b => window.dispatchEvent(new CustomEvent('dex:badge', { detail: { badge: b } })))
+    }
+
     return { ok: true, xp: data.xp, level: data.level, badges: data.newBadges || [] }
   } catch (err) {
     return { ok: false, error: err.message }

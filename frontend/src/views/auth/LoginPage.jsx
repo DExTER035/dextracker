@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../providers/AuthProvider.jsx'
 import { Button, Card } from '../../ui/components/ui.jsx'
@@ -9,8 +9,6 @@ export function LoginPage() {
   const navigate = useNavigate()
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
-
-  const redirectTo = useMemo(() => `${window.location.origin}/`, [])
 
   async function onGoogle() {
     setError('')

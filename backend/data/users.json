@@ -30,9 +30,39 @@
     "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=DemoUser",
     "googleId": "demo-system-id",
     "tag": "QQ50D",
-    "xp": 0,
+    "xp": 70,
     "level": 1,
-    "badges": [],
-    "createdAt": "2026-03-19T12:23:01.977Z"
+    "badges": [
+      {
+        "id": "first_task",
+        "name": "Task Master",
+        "icon": "✅",
+        "xpReq": 10,
+        "desc": "Complete your first task"
+      }
+    ],
+    "createdAt": "2026-03-19T12:23:01.977Z",
+    "lastActive": "2026-03-20"
+  },
+  {
+    "id": "acaa7de7-02e3-4aa4-9337-b653c527a452",
+    "email": "user@google.com",
+    "name": "Google User",
+    "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=GoogleUser",
+    "googleId": "google-mock-id",
+    "tag": "GB4BV",
+    "xp": 50,
+    "level": 1,
+    "badges": [
+      {
+        "id": "first_task",
+        "name": "Task Master",
+        "icon": "✅",
+        "xpReq": 10,
+        "desc": "Complete your first task"
+      }
+    ],
+    "createdAt": "2026-03-19T13:59:08.012Z",
+    "lastActive": "2026-03-20"
   }
 ]
