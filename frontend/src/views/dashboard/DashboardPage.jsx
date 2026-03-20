@@ -12,6 +12,11 @@ import { EmptyState } from '../../ui/components/EmptyState.jsx'
 import { useToast } from '../../ui/components/ToastProvider.jsx'
 import { useCountUp } from '../../hooks/useCountUp.js'
 
+function AnimatedMetric({ value, duration = 1000, prefix = "", suffix = "" }) {
+  const count = useCountUp(value, duration);
+  return <>{prefix}{count}{suffix}</>;
+}
+
 const QUOTES = [
   { text: "The secret of getting ahead is getting started.", author: "Mark Twain" },
   { text: "It always seems impossible until it's done.", author: "Nelson Mandela" },
@@ -179,15 +184,7 @@ export function DashboardPage() {
   const challengeDone = user?.id ? localStorage.getItem(`dex:challenge:${user.id}:${todayISO()}`) === '1' : false;
   const todayStr = new Intl.DateTimeFormat('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(new Date());
 
-  const animatedTasks = useCountUp(stats?.tasksDone || 0);
-  const animatedHabits = useCountUp(stats?.habitsDone || 0);
-  const animatedStudy = useCountUp(stats?.studyHrs || 0, 1000);
-  const animatedSpent = useCountUp(stats?.exp || 0);
-  
-  const animatedTotalXp = useCountUp(profile?.xp || 0, 1500);
-  const animatedStreak = useCountUp(profile?.streak || 0, 1200);
   const badgesLen = user?.badges?.length || profile?.badges?.length || 0;
-  const animatedBadgesNum = useCountUp(badgesLen, 1000);
   const gradeColor = stats?.weekGrade === 'A' || stats?.weekGrade === 'B' 
       ? 'text-success drop-shadow-[0_0_20px_rgba(52,211,153,0.4)]'
       : stats?.weekGrade === 'C' 
@@ -290,10 +287,10 @@ export function DashboardPage() {
         className="grid grid-cols-2 lg:grid-cols-5 gap-5 mt-8"
       >
         {[
-          { label: 'TASKS', val: animatedTasks, sub: 'done today', color: '#22d3ee', delay: 0 },
-          { label: 'HABITS', val: animatedHabits, sub: 'completed', color: '#8b5cf6', delay: 100 },
-          { label: 'STUDY', val: `${animatedStudy}h`, sub: 'today', color: '#34d399', delay: 200 },
-          { label: 'SPENT', val: `₹${animatedSpent}`, sub: 'today', color: '#fb923c', delay: 300 },
+          { label: 'TASKS', val: <AnimatedMetric value={stats?.tasksDone || 0} delay={0} />, sub: 'done today', color: '#22d3ee', delay: 0 },
+          { label: 'HABITS', val: <AnimatedMetric value={stats?.habitsDone || 0} delay={100} />, sub: 'completed', color: '#8b5cf6', delay: 100 },
+          { label: 'STUDY', val: <AnimatedMetric value={stats?.studyHrs || 0} duration={1000} suffix="h" delay={200} />, sub: 'today', color: '#34d399', delay: 200 },
+          { label: 'SPENT', val: <AnimatedMetric value={stats?.exp || 0} prefix="₹" delay={300} />, sub: 'today', color: '#fb923c', delay: 300 },
           { label: 'MOOD', val: stats?.mood || '—', sub: 'today', color: '#f472b6', delay: 400 },
         ].map((m) => (
           <motion.div key={m.label} variants={itemVariants}>
@@ -364,15 +361,15 @@ export function DashboardPage() {
           
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 mb-16 w-full max-w-4xl mx-auto border-b border-border/30 pb-16">
             <div className="text-center group cursor-default">
-              <div className="text-[64px] font-black text-cyan drop-shadow-[0_0_20px_rgba(34,211,238,0.4)] leading-none font-mono group-hover:scale-105 transition-transform">{animatedTotalXp}</div>
+              <div className="text-[64px] font-black text-cyan drop-shadow-[0_0_20px_rgba(34,211,238,0.4)] leading-none font-mono group-hover:scale-105 transition-transform"><AnimatedMetric value={profile?.xp || 0} duration={1500} /></div>
               <div className="mt-4 text-[10px] font-bold uppercase tracking-[2px] text-muted font-heading">TOTAL XP</div>
             </div>
             <div className="text-center group cursor-default">
-              <div className="text-[64px] font-black text-gold drop-shadow-[0_0_20px_rgba(251,191,36,0.4)] leading-none font-mono group-hover:animate-shake">{animatedStreak}</div>
+              <div className="text-[64px] font-black text-gold drop-shadow-[0_0_20px_rgba(251,191,36,0.4)] leading-none font-mono group-hover:animate-shake"><AnimatedMetric value={profile?.streak || 0} duration={1200} /></div>
               <div className="mt-4 text-[10px] font-bold uppercase tracking-[2px] text-muted font-heading">DAY STREAK</div>
             </div>
             <div className="text-center group cursor-default">
-              <div className="text-[64px] font-black text-violet drop-shadow-[0_0_20px_rgba(139,92,246,0.4)] leading-none font-mono group-hover:animate-wobble">{animatedBadgesNum}</div>
+              <div className="text-[64px] font-black text-violet drop-shadow-[0_0_20px_rgba(139,92,246,0.4)] leading-none font-mono group-hover:animate-wobble"><AnimatedMetric value={badgesLen} duration={1000} /></div>
               <div className="mt-4 text-[10px] font-bold uppercase tracking-[2px] text-muted font-heading">BADGES</div>
             </div>
             <div className="text-center group cursor-default">
